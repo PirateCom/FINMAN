@@ -78,8 +78,8 @@ export default async function HomePage({
       <div className="mt-5">
         <ScopeToggle
           current={scope}
-          familyHref="/"
-          youHref="/?scope=you"
+          familyHref="/?scope=family"
+          youHref="/"
         />
       </div>
 

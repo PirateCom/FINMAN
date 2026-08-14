@@ -64,7 +64,7 @@ export default async function HistoryPage({
   const monthParam = `${year}-${String(month).padStart(2, "0")}`;
   const extra = [
     type !== "all" ? `type=${type}` : "",
-    scope === "you" ? "scope=you" : "",
+    scope === "family" ? "scope=family" : "",
   ]
     .filter(Boolean)
     .join("&");
@@ -75,7 +75,7 @@ export default async function HistoryPage({
     const nextType = next.type ?? type;
     const nextScope = next.scope ?? scope;
     if (nextType !== "all") params.set("type", nextType);
-    if (nextScope === "you") params.set("scope", "you");
+    if (nextScope === "family") params.set("scope", "family");
     return `/history?${params.toString()}`;
   }
 

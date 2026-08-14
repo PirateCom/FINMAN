@@ -161,7 +161,7 @@ export function byPerson(transactions: Transaction[], userId: string) {
 }
 
 export function parseScope(value: string | undefined): "family" | "you" {
-  return value === "you" ? "you" : "family";
+  return value === "family" ? "family" : "you";
 }
 
 export async function getTransaction(id: string): Promise<Transaction | null> {
