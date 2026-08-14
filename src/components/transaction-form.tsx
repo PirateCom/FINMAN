@@ -3,16 +3,16 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addCategory, deleteTransaction, saveTransaction } from "@/lib/actions";
-import { baniToInput, todayISO } from "@/lib/money";
+import { baniToInput, todayISO, toDisplayBani, type MoneyContext } from "@/lib/money";
 import type { Category, Transaction, TxType } from "@/lib/types";
 
 export function TransactionForm({
   categories,
-  currency,
+  money,
   transaction,
 }: {
   categories: Category[];
-  currency: string;
+  money: MoneyContext;
   transaction?: Transaction;
 }) {
   const router = useRouter();
@@ -22,6 +22,9 @@ export function TransactionForm({
   const [pending, setPending] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategory, setNewCategory] = useState("");
+  const amountShown = transaction
+    ? toDisplayBani(transaction.amount_bani, money)
+    : { bani: 0, currency: money.display };
 
   const visible = useMemo(
     () => categories.filter((c) => c.type === type),
@@ -90,12 +93,12 @@ export function TransactionForm({
             name="amount"
             inputMode="decimal"
             required
-            defaultValue={transaction ? baniToInput(transaction.amount_bani) : ""}
+            defaultValue={transaction ? baniToInput(amountShown.bani) : ""}
             placeholder="0.00"
             className="h-16 w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 pr-16 text-3xl font-semibold tracking-tight outline-none ring-[var(--accent)] focus:ring-2"
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[var(--muted-fg)]">
-            {currency}
+            {amountShown.currency}
           </span>
         </div>
       </label>

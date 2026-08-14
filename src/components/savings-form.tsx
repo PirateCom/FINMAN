@@ -2,22 +2,23 @@
 
 import { useState } from "react";
 import { setSavings } from "@/lib/actions";
-import { baniToInput, formatMoney } from "@/lib/money";
+import { baniToInput, formatStoredMoney, toDisplayBani, type MoneyContext } from "@/lib/money";
 
 export function SavingsForm({
   userId,
-  currency,
+  money,
   current,
   canEdit,
 }: {
   userId: string;
-  currency: string;
+  money: MoneyContext;
   current: number;
   canEdit: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [editing, setEditing] = useState(false);
+  const shown = toDisplayBani(current, money);
 
   async function onSave(formData: FormData) {
     setPending(true);
@@ -34,7 +35,7 @@ export function SavingsForm({
 
   if (!canEdit) {
     return (
-      <p className="text-sm font-semibold">{formatMoney(current, currency)}</p>
+      <p className="text-sm font-semibold">{formatStoredMoney(current, money)}</p>
     );
   }
 
@@ -46,8 +47,8 @@ export function SavingsForm({
           name="amount"
           inputMode="decimal"
           required
-          defaultValue={current ? baniToInput(current) : ""}
-          placeholder={`Amount (${currency})`}
+          defaultValue={shown.bani ? baniToInput(shown.bani) : ""}
+          placeholder={`Amount (${shown.currency})`}
           className="h-10 w-full rounded-xl border border-[var(--accent-fg)]/20 bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none ring-[var(--accent-fg)] focus:ring-2"
         />
         <div className="flex gap-2">
@@ -76,7 +77,7 @@ export function SavingsForm({
 
   return (
     <div className="flex items-center gap-2">
-      <p className="text-sm font-semibold">{formatMoney(current, currency)}</p>
+      <p className="text-sm font-semibold">{formatStoredMoney(current, money)}</p>
       <button
         type="button"
         onClick={() => {

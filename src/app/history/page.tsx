@@ -10,8 +10,7 @@ import {
   byPerson,
   ensureProfile,
   getAllTransactions,
-  getSavingsByUser,
-  getSettings,
+  getMoneyContext,
   getTransactions,
   getUser,
   monthTotals,
@@ -38,19 +37,14 @@ export default async function HistoryPage({
     : "all") as TxType | "all";
   const scope = parseScope(q.scope);
 
-  const settings = await getSettings();
-  const [monthAll, allTime, savingsByUser] = await Promise.all([
+  const [monthAll, allTime, money] = await Promise.all([
     getTransactions({ year, month }),
     getAllTransactions(),
-    getSavingsByUser().catch(() => ({}) as Record<string, number>),
+    getMoneyContext(),
   ]);
 
   const scopedMonth = scope === "you" ? byPerson(monthAll, user.id) : monthAll;
   const scopedAll = scope === "you" ? byPerson(allTime, user.id) : allTime;
-  const savings =
-    scope === "you"
-      ? (savingsByUser[user.id] ?? 0)
-      : Object.values(savingsByUser).reduce((sum, n) => sum + n, 0);
   const listed =
     type === "all" ? scopedMonth : scopedMonth.filter((tx) => tx.type === type);
 
@@ -92,8 +86,7 @@ export default async function HistoryPage({
         <TotalsCard
           month={monthTotals(scopedMonth)}
           allTime={monthTotals(scopedAll)}
-          currency={settings.currency}
-          savings={savings}
+          money={money}
         />
       </div>
 
@@ -115,7 +108,7 @@ export default async function HistoryPage({
 
       <div className="flex flex-col gap-2">
         {listed.map((tx) => (
-          <TransactionRow key={tx.id} tx={tx} currency={settings.currency} />
+          <TransactionRow key={tx.id} tx={tx} money={money} />
         ))}
         {listed.length === 0 ? (
           <p className="rounded-2xl bg-[var(--card)] px-4 py-8 text-center text-sm text-[var(--muted-fg)]">

@@ -3,18 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { addCategory, updateCurrency, updateDisplayName } from "@/lib/actions";
+import { CurrencyConverter } from "@/components/currency-converter";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CURRENCIES } from "@/lib/money";
 import type { Category, Profile } from "@/lib/types";
-
-const CURRENCIES = ["SEK", "EUR", "RON"];
 
 export function SettingsForm({
   profile,
   currency,
+  baseCurrency,
   categories,
 }: {
   profile: Profile;
   currency: string;
+  baseCurrency: string;
   categories: Category[];
 }) {
   const [nameError, setNameError] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export function SettingsForm({
 
   async function onCurrency(formData: FormData) {
     await updateCurrency(formData);
-    setSaved("Currency saved");
+    setSaved("Display currency saved");
   }
 
   async function onCategory(formData: FormData) {
@@ -89,11 +91,18 @@ export function SettingsForm({
           Family members
           <span className="text-[var(--muted-fg)]">›</span>
         </Link>
+        <Link
+          href="/reminders"
+          className="mt-2 flex h-12 items-center justify-between rounded-2xl bg-[var(--card)] px-4 text-sm font-semibold"
+        >
+          Payment reminders
+          <span className="text-[var(--muted-fg)]">›</span>
+        </Link>
       </section>
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--muted-fg)]">
-          Currency
+          Show amounts in
         </h2>
         <form action={onCurrency}>
           <select
@@ -109,6 +118,17 @@ export function SettingsForm({
             ))}
           </select>
         </form>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--muted-fg)]">
+          Money is kept in {baseCurrency}. Changing this converts every total and
+          transaction with the BNR rate from cursbnr.ro.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--muted-fg)]">
+          Converter
+        </h2>
+        <CurrencyConverter currency={currency} />
       </section>
 
       <section>

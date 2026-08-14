@@ -6,14 +6,14 @@ import {
   byPerson,
   ensureProfile,
   getAllTransactions,
+  getMoneyContext,
   getProfiles,
   getSavingsByUser,
-  getSettings,
   getTransactions,
   getUser,
   monthTotals,
 } from "@/lib/data";
-import { formatMoney, monthLabel, parseMonthParam } from "@/lib/money";
+import { conversionNote, formatStoredMoney, monthLabel, parseMonthParam } from "@/lib/money";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
 export default async function FamilyPage() {
@@ -23,9 +23,9 @@ export default async function FamilyPage() {
   await ensureProfile(user.id, user.email);
 
   const { year, month } = parseMonthParam(undefined);
-  const [members, settings, monthTx, allTx] = await Promise.all([
+  const [members, money, monthTx, allTx] = await Promise.all([
     getProfiles(),
-    getSettings(),
+    getMoneyContext(),
     getTransactions({ year, month }),
     getAllTransactions(),
   ]);
@@ -38,6 +38,7 @@ export default async function FamilyPage() {
   }
 
   const householdSavings = Object.values(savings).reduce((sum, n) => sum + n, 0);
+  const note = conversionNote(money);
   const listedMembers = [...members].sort((a, b) => {
     if (a.id === user.id) return -1;
     if (b.id === user.id) return 1;
@@ -54,8 +55,9 @@ export default async function FamilyPage() {
         <div className="px-5 py-5">
           <p className="text-sm opacity-80">Household savings</p>
           <p className="mt-1 text-3xl font-semibold tracking-tight">
-            {formatMoney(householdSavings, settings.currency)}
+            {formatStoredMoney(householdSavings, money)}
           </p>
+          {note ? <p className="mt-2 text-xs opacity-70">{note}</p> : null}
         </div>
 
         {listedMembers.length > 0 ? (
@@ -79,7 +81,7 @@ export default async function FamilyPage() {
                   <div className="shrink-0 text-right">
                     <SavingsForm
                       userId={member.id}
-                      currency={settings.currency}
+                      money={money}
                       current={saved}
                       canEdit={isYou}
                     />
@@ -120,22 +122,22 @@ export default async function FamilyPage() {
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-xl bg-[var(--muted)] px-3 py-2">
                   <p className="text-xs text-[var(--muted-fg)]">Remaining this month</p>
-                  <p className="mt-0.5 font-semibold">{formatMoney(monthStats.net, settings.currency)}</p>
+                  <p className="mt-0.5 font-semibold">{formatStoredMoney(monthStats.net, money)}</p>
                 </div>
                 <div className="rounded-xl bg-[var(--muted)] px-3 py-2">
                   <p className="text-xs text-[var(--muted-fg)]">All time remaining</p>
-                  <p className="mt-0.5 font-semibold">{formatMoney(allStats.net, settings.currency)}</p>
+                  <p className="mt-0.5 font-semibold">{formatStoredMoney(allStats.net, money)}</p>
                 </div>
                 <div className="rounded-xl bg-[var(--muted)] px-3 py-2">
                   <p className="text-xs text-[var(--muted-fg)]">Income</p>
                   <p className="mt-0.5 font-semibold text-[var(--income)]">
-                    {formatMoney(monthStats.income, settings.currency)}
+                    {formatStoredMoney(monthStats.income, money)}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[var(--muted)] px-3 py-2">
                   <p className="text-xs text-[var(--muted-fg)]">Expenses</p>
                   <p className="mt-0.5 font-semibold text-[var(--expense)]">
-                    {formatMoney(monthStats.expense, settings.currency)}
+                    {formatStoredMoney(monthStats.expense, money)}
                   </p>
                 </div>
               </div>

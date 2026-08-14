@@ -1,3 +1,49 @@
+import { convertBani, type FxSnapshot } from "@/lib/fx";
+
+export const CURRENCIES = ["SEK", "EUR", "RON"] as const;
+
+export type MoneyContext = {
+  base: string;
+  display: string;
+  fx: FxSnapshot | null;
+};
+
+export function toDisplayBani(
+  bani: number,
+  money: MoneyContext,
+): { bani: number; currency: string } {
+  if (money.base === money.display) return { bani, currency: money.display };
+  const converted = convertBani(bani, money.base, money.display, money.fx);
+  if (converted == null) return { bani, currency: money.base };
+  return { bani: converted, currency: money.display };
+}
+
+export function toStoredBani(displayBani: number, money: MoneyContext): number | null {
+  if (money.base === money.display) return displayBani;
+  return convertBani(displayBani, money.display, money.base, money.fx);
+}
+
+export function formatStoredMoney(bani: number, money: MoneyContext): string {
+  const shown = toDisplayBani(bani, money);
+  return formatMoney(shown.bani, shown.currency);
+}
+
+export function conversionNote(money: MoneyContext): string | null {
+  if (money.base === money.display) return null;
+  const shown = toDisplayBani(100, money);
+  if (shown.currency !== money.display) return null;
+  const date = money.fx?.date
+    ? new Date(money.fx.date).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : null;
+  return date
+    ? `Converted from ${money.base} · BNR ${date}`
+    : `Converted from ${money.base}`;
+}
+
 export function parseAmountToBani(input: string): number | null {
   const normalized = input.trim().replace(/\s/g, "").replace(",", ".");
   if (!normalized) return null;

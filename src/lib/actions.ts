@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { parseAmountToBani } from "@/lib/money";
-import type { TxType } from "@/lib/types";
+import { getMoneyContext } from "@/lib/data";
+import { parseAmountToBani, todayISO, toStoredBani } from "@/lib/money";
+import { nextDueAfterPaid } from "@/lib/reminders";
+import type { RepeatMonths, TxType } from "@/lib/types";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -88,9 +90,15 @@ export async function saveTransaction(formData: FormData): Promise<{ error?: str
   if (!amount) return { error: "Enter a valid amount." };
   if (!date) return { error: "Pick a date." };
 
+  const money = await getMoneyContext();
+  const stored = toStoredBani(amount, money);
+  if (stored == null || stored <= 0) {
+    return { error: "Could not convert that amount. Try again or switch back to SEK." };
+  }
+
   const payload = {
     type,
-    amount_bani: amount,
+    amount_bani: stored,
     category_id,
     date,
     note,
@@ -171,6 +179,8 @@ export async function updateCurrency(formData: FormData): Promise<{ error?: stri
   if (error) return { error: error.message };
   revalidatePath("/");
   revalidatePath("/history");
+  revalidatePath("/family");
+  revalidatePath("/add");
   revalidatePath("/settings");
   return {};
 }
@@ -183,7 +193,11 @@ export async function setSavings(formData: FormData): Promise<{ error?: string }
   if (userId !== user.id) return { error: "You can only edit your own savings." };
   if (!Number.isFinite(n) || n < 0) return { error: "Enter a valid amount (0 or more)." };
 
-  const target = Math.round(n * 100);
+  const money = await getMoneyContext();
+  const target = toStoredBani(Math.round(n * 100), money);
+  if (target == null || target < 0) {
+    return { error: "Could not convert that amount. Try again or switch back to SEK." };
+  }
   const { data: rows, error: sumError } = await supabase
     .from("savings_movements")
     .select("amount_bani")
@@ -205,5 +219,124 @@ export async function setSavings(formData: FormData): Promise<{ error?: string }
   revalidatePath("/family");
   revalidatePath("/");
   revalidatePath("/history");
+  return {};
+}
+
+function parseRepeatMonths(value: string): RepeatMonths | null {
+  const n = Number(value);
+  if (n === 0 || n === 1 || n === 6 || n === 12) return n;
+  return null;
+}
+
+function revalidateReminders() {
+  revalidatePath("/");
+  revalidatePath("/history");
+  revalidatePath("/reminders");
+}
+
+export async function saveReminder(formData: FormData): Promise<{ error?: string }> {
+  const { supabase, user } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const amount = parseAmountToBani(String(formData.get("amount") ?? ""));
+  const category_id = String(formData.get("category_id") ?? "") || null;
+  const due_date = String(formData.get("due_date") ?? "");
+  const repeat_months = parseRepeatMonths(String(formData.get("repeat_months") ?? "0"));
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  if (!title) return { error: "Give this reminder a name." };
+  if (!amount) return { error: "Enter a valid amount." };
+  if (!due_date) return { error: "Pick a due date." };
+  if (repeat_months == null) return { error: "Choose how often this repeats." };
+
+  const money = await getMoneyContext();
+  const stored = toStoredBani(amount, money);
+  if (stored == null || stored <= 0) {
+    return { error: "Could not convert that amount. Try again or switch back to SEK." };
+  }
+
+  const payload = {
+    title,
+    amount_bani: stored,
+    category_id,
+    due_date,
+    repeat_months,
+    note,
+    completed_at: null,
+  };
+
+  if (id) {
+    const { error } = await supabase.from("reminders").update(payload).eq("id", id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase.from("reminders").insert({
+      ...payload,
+      created_by: user.id,
+    });
+    if (error) return { error: error.message };
+  }
+
+  revalidateReminders();
+  redirect("/reminders");
+}
+
+export async function deleteReminder(formData: FormData) {
+  const { supabase } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const { error } = await supabase.from("reminders").delete().eq("id", id);
+  if (error) throw error;
+  revalidateReminders();
+  redirect("/reminders");
+}
+
+export async function markReminderPaid(formData: FormData): Promise<{ error?: string }> {
+  const { supabase, user } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const amount = parseAmountToBani(String(formData.get("amount") ?? ""));
+  if (!id) return { error: "Missing reminder." };
+  if (!amount) return { error: "Enter a valid amount." };
+
+  const money = await getMoneyContext();
+  const stored = toStoredBani(amount, money);
+  if (stored == null || stored <= 0) {
+    return { error: "Could not convert that amount. Try again or switch back to SEK." };
+  }
+
+  const { data: row, error: loadError } = await supabase
+    .from("reminders")
+    .select("id, title, category_id, due_date, repeat_months, completed_at, note")
+    .eq("id", id)
+    .maybeSingle();
+  if (loadError) return { error: loadError.message };
+  if (!row || row.completed_at) return { error: "That reminder is no longer due." };
+
+  const today = todayISO();
+  const repeat = Number(row.repeat_months);
+  const note = [row.title, row.note].filter(Boolean).join(" — ");
+
+  const { error: txError } = await supabase.from("transactions").insert({
+    type: "expense",
+    amount_bani: stored,
+    category_id: row.category_id,
+    date: today,
+    note,
+    entered_by: user.id,
+    reminder_id: id,
+  });
+  if (txError) return { error: txError.message };
+
+  const update =
+    repeat === 0
+      ? { completed_at: new Date().toISOString(), amount_bani: stored }
+      : {
+          due_date: nextDueAfterPaid(row.due_date as string, repeat, today),
+          amount_bani: stored,
+        };
+
+  const { error: updateError } = await supabase.from("reminders").update(update).eq("id", id);
+  if (updateError) return { error: updateError.message };
+
+  revalidateReminders();
   return {};
 }

@@ -29,4 +29,22 @@ export type Transaction = {
 export type Settings = {
   id: number;
   currency: string;
+  base_currency: string;
+};
+
+export type RepeatMonths = 0 | 1 | 6 | 12;
+
+export type Reminder = {
+  id: string;
+  title: string;
+  amount_bani: number;
+  category_id: string | null;
+  due_date: string;
+  repeat_months: RepeatMonths;
+  note: string | null;
+  created_by: string;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  category: Category | null;
 };

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TransactionForm } from "@/components/transaction-form";
-import { ensureProfile, getCategories, getSettings, getUser } from "@/lib/data";
+import { ensureProfile, getCategories, getMoneyContext, getUser } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
 export default async function AddPage() {
@@ -11,11 +11,11 @@ export default async function AddPage() {
   if (!user) redirect("/login");
   await ensureProfile(user.id, user.email);
 
-  const [categories, settings] = await Promise.all([getCategories(), getSettings()]);
+  const [categories, money] = await Promise.all([getCategories(), getMoneyContext()]);
 
   return (
     <AppShell title="Add" action={<ThemeToggle />}>
-      <TransactionForm categories={categories} currency={settings.currency} />
+      <TransactionForm categories={categories} money={money} />
     </AppShell>
   );
 }

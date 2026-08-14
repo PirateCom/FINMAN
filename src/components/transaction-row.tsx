@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { formatMoney } from "@/lib/money";
+import { formatStoredMoney, type MoneyContext } from "@/lib/money";
 import type { Transaction } from "@/lib/types";
 
 export function TransactionRow({
   tx,
-  currency,
+  money,
 }: {
   tx: Transaction;
-  currency: string;
+  money: MoneyContext;
 }) {
   const income = tx.type === "income";
   return (
@@ -35,7 +35,7 @@ export function TransactionRow({
         }`}
       >
         {income ? "+" : "−"}
-        {formatMoney(tx.amount_bani, currency)}
+        {formatStoredMoney(tx.amount_bani, money)}
       </span>
     </Link>
   );

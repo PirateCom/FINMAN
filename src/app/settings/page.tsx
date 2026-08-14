@@ -26,6 +26,7 @@ export default async function SettingsPage() {
       <SettingsForm
         profile={profile}
         currency={settings.currency}
+        baseCurrency={settings.base_currency}
         categories={categories}
       />
     </AppShell>

@@ -1,17 +1,17 @@
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { ReminderForm } from "@/components/reminder-form";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { TransactionForm } from "@/components/transaction-form";
 import {
   ensureProfile,
   getCategories,
   getMoneyContext,
-  getTransaction,
+  getReminder,
   getUser,
 } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
-export default async function EditPage({
+export default async function EditReminderPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -22,21 +22,17 @@ export default async function EditPage({
   await ensureProfile(user.id, user.email);
 
   const { id } = await params;
-  const [tx, categories, money] = await Promise.all([
-    getTransaction(id),
+  const [reminder, categories, money] = await Promise.all([
+    getReminder(id),
     getCategories(),
     getMoneyContext(),
   ]);
 
-  if (!tx) notFound();
+  if (!reminder) notFound();
 
   return (
-    <AppShell title="Edit" action={<ThemeToggle />}>
-      <TransactionForm
-        categories={categories}
-        money={money}
-        transaction={tx}
-      />
+    <AppShell title="Edit reminder" action={<ThemeToggle />}>
+      <ReminderForm categories={categories} money={money} reminder={reminder} />
     </AppShell>
   );
 }

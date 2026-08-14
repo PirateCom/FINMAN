@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { monthBounds } from "@/lib/money";
-import type { Category, Profile, Settings, Transaction, TxType } from "@/lib/types";
+import { loadFxSnapshot } from "@/lib/fx-server";
+import { monthBounds, todayISO, type MoneyContext } from "@/lib/money";
+import { dueSoonUntilISO } from "@/lib/reminders";
+import type { Category, Profile, Reminder, RepeatMonths, Settings, Transaction, TxType } from "@/lib/types";
 
 export async function getUser() {
   const supabase = await createClient();
@@ -35,21 +37,45 @@ export async function getSettings(): Promise<Settings> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("settings")
-    .select("id, currency")
+    .select("id, currency, base_currency")
     .eq("id", 1)
     .maybeSingle();
 
   if (error) throw error;
-  if (data) return data as Settings;
+  if (data) {
+    return {
+      id: data.id as number,
+      currency: (data.currency as string) || "SEK",
+      base_currency: (data.base_currency as string) || "SEK",
+    };
+  }
 
   const { data: inserted, error: insertError } = await supabase
     .from("settings")
-    .insert({ id: 1, currency: "SEK" })
-    .select("id, currency")
+    .insert({ id: 1, currency: "SEK", base_currency: "SEK" })
+    .select("id, currency, base_currency")
     .single();
 
   if (insertError) throw insertError;
-  return inserted as Settings;
+  return {
+    id: inserted.id as number,
+    currency: (inserted.currency as string) || "SEK",
+    base_currency: (inserted.base_currency as string) || "SEK",
+  };
+}
+
+export async function getMoneyContext(): Promise<MoneyContext> {
+  const settings = await getSettings();
+  const base = settings.base_currency || "SEK";
+  const display = settings.currency || "SEK";
+  if (base === display) return { base, display, fx: null };
+
+  try {
+    const fx = await loadFxSnapshot();
+    return { base, display, fx };
+  } catch {
+    return { base, display, fx: null };
+  }
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -181,4 +207,68 @@ export function monthTotals(transactions: Transaction[]) {
     else expense += tx.amount_bani;
   }
   return { income, expense, net: income - expense };
+}
+
+const reminderSelect =
+  "id, title, amount_bani, category_id, due_date, repeat_months, note, created_by, completed_at, created_at, updated_at, category:categories(id, name, type, color)";
+
+function normalizeReminder(row: Record<string, unknown>): Reminder {
+  const category = Array.isArray(row.category) ? row.category[0] : row.category;
+  const repeat = Number(row.repeat_months);
+  const repeat_months: RepeatMonths =
+    repeat === 1 || repeat === 6 || repeat === 12 ? repeat : 0;
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    amount_bani: row.amount_bani as number,
+    category_id: (row.category_id as string | null) ?? null,
+    due_date: row.due_date as string,
+    repeat_months,
+    note: (row.note as string | null) ?? null,
+    created_by: row.created_by as string,
+    completed_at: (row.completed_at as string | null) ?? null,
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+    category: (category as Category | null) ?? null,
+  };
+}
+
+export async function getReminders(): Promise<Reminder[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("reminders")
+    .select(reminderSelect)
+    .is("completed_at", null)
+    .order("due_date", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => normalizeReminder(row as Record<string, unknown>));
+}
+
+export async function getDueReminders(): Promise<Reminder[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("reminders")
+    .select(reminderSelect)
+    .is("completed_at", null)
+    .lte("due_date", dueSoonUntilISO(todayISO()))
+    .order("due_date", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => normalizeReminder(row as Record<string, unknown>));
+}
+
+export async function getReminder(id: string): Promise<Reminder | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("reminders")
+    .select(reminderSelect)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return normalizeReminder(data as Record<string, unknown>);
 }

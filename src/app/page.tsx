@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { DueReminders } from "@/components/due-reminders";
 import { ScopeToggle } from "@/components/scope-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TotalsCard } from "@/components/totals-card";
@@ -8,16 +9,16 @@ import {
   byPerson,
   ensureProfile,
   getAllTransactions,
-  getSavingsByUser,
-  getSettings,
+  getDueReminders,
+  getMoneyContext,
   getTransactions,
   getUser,
   monthTotals,
   parseScope,
 } from "@/lib/data";
-import { monthLabel, parseMonthParam } from "@/lib/money";
+import { monthLabel, parseMonthParam, type MoneyContext } from "@/lib/money";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
-import type { Transaction } from "@/lib/types";
+import type { Reminder, Transaction } from "@/lib/types";
 
 export default async function HomePage({
   searchParams,
@@ -34,24 +35,21 @@ export default async function HomePage({
   const { year, month } = parseMonthParam(undefined);
   let monthTx: Transaction[] = [];
   let allTx: Transaction[] = [];
-  let currency = "SEK";
-  let savings = 0;
+  let dueReminders: Reminder[] = [];
+  let money: MoneyContext = { base: "SEK", display: "SEK", fx: null };
   let loadError: string | null = null;
 
   try {
-    const settings = await getSettings();
-    currency = settings.currency;
-    const [monthData, allData, savingsByUser] = await Promise.all([
+    const [monthData, allData, moneyContext, due] = await Promise.all([
       getTransactions({ year, month }),
       getAllTransactions(),
-      getSavingsByUser().catch(() => ({}) as Record<string, number>),
+      getMoneyContext(),
+      getDueReminders(),
     ]);
     monthTx = monthData;
     allTx = allData;
-    savings =
-      scope === "you"
-        ? (savingsByUser[user.id] ?? 0)
-        : Object.values(savingsByUser).reduce((sum, n) => sum + n, 0);
+    money = moneyContext;
+    dueReminders = due;
   } catch {
     loadError = "Could not load data. Run the SQL migration in your new Supabase project.";
   }
@@ -87,9 +85,10 @@ export default async function HomePage({
           <TotalsCard
             month={monthTotals(scopedMonth)}
             allTime={monthTotals(scopedAll)}
-            currency={currency}
-            savings={savings}
+            money={money}
           />
+
+          <DueReminders reminders={dueReminders} money={money} />
 
           <div className="mt-8 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted-fg)]">
@@ -98,7 +97,7 @@ export default async function HomePage({
           </div>
           <div className="mt-3 flex flex-col gap-2">
             {scopedMonth.slice(0, 8).map((tx) => (
-              <TransactionRow key={tx.id} tx={tx} currency={currency} />
+              <TransactionRow key={tx.id} tx={tx} money={money} />
             ))}
             {scopedMonth.length === 0 ? (
               <p className="rounded-2xl bg-[var(--card)] px-4 py-8 text-center text-sm text-[var(--muted-fg)]">
