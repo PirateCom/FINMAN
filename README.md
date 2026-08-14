@@ -15,10 +15,10 @@ Shared household ledger for income and expenses. You and your wife sign in from 
 Do **not** reuse the Tocab store project.
 
 1. Open [https://supabase.com](https://supabase.com) → New project.
-2. SQL Editor → paste and run [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql).
+2. SQL Editor → paste and run [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql), then [`supabase/migrations/002_users.sql`](supabase/migrations/002_users.sql) (creates the `users` table).
 3. **Authentication → Providers → Email**: leave email/password on.
-4. **Authentication → Providers**: turn **off** “Allow new users to sign up” (or disable public signup in Auth settings). You will create users yourself.
-5. **Authentication → Users → Add user**: create your account and your wife’s (email + password).
+4. **Authentication → Providers → Email**: turn **off** “Confirm email” so signup logs you in immediately.
+5. Leave **Allow new users to sign up** **on**. Each person creates their own account the first time they open the app.
 6. Copy **Project URL** and **anon public** key from **Project Settings → API**.
 
 ## 2. Run locally
@@ -40,9 +40,9 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and sign in.
+Open [http://localhost:3000](http://localhost:3000) and **sign up** (username, email, password). After that you stay logged in.
 
-If you created users **before** running the SQL, sign in once anyway — the app creates a profile on first use.
+If you created users **before** running the SQL, open the app once anyway — the profile row is created on first use.
 
 ## 3. Host on `finances.<your-domain>`
 

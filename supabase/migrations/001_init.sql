@@ -1,9 +1,11 @@
 -- Family Finances — run this in the Supabase SQL editor (new project, not Tocab).
 
-create table public.profiles (
+create table public.users (
   id uuid primary key references auth.users (id) on delete cascade,
+  email text,
   display_name text not null default 'Family member',
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table public.settings (
@@ -19,7 +21,7 @@ create table public.categories (
   name text not null,
   type text not null check (type in ('income', 'expense')),
   color text not null default '#78716C',
-  created_by uuid references public.profiles (id) on delete set null,
+  created_by uuid references public.users (id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -30,7 +32,7 @@ create table public.transactions (
   category_id uuid references public.categories (id) on delete set null,
   date date not null default (current_date),
   note text,
-  entered_by uuid not null references public.profiles (id) on delete restrict,
+  entered_by uuid not null references public.users (id) on delete restrict,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -45,9 +47,10 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, display_name)
+  insert into public.users (id, email, display_name)
   values (
     new.id,
+    new.email,
     coalesce(nullif(new.raw_user_meta_data->>'display_name', ''), split_part(new.email, '@', 1))
   );
   return new;
@@ -74,18 +77,18 @@ create trigger transactions_updated_at
   before update on public.transactions
   for each row execute function public.touch_updated_at();
 
-alter table public.profiles enable row level security;
+alter table public.users enable row level security;
 alter table public.settings enable row level security;
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
 
-create policy "household read profiles" on public.profiles
+create policy "household read users" on public.users
   for select to authenticated using (true);
 
-create policy "own profile insert" on public.profiles
+create policy "own user insert" on public.users
   for insert to authenticated with check (auth.uid() = id);
 
-create policy "own profile update" on public.profiles
+create policy "own user update" on public.users
   for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
 
 create policy "household settings" on public.settings

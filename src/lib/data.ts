@@ -13,8 +13,8 @@ export async function getUser() {
 export async function ensureProfile(userId: string, email: string | undefined) {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("profiles")
-    .select("id, display_name")
+    .from("users")
+    .select("id, email, display_name")
     .eq("id", userId)
     .maybeSingle();
 
@@ -22,9 +22,9 @@ export async function ensureProfile(userId: string, email: string | undefined) {
 
   const display_name = email?.split("@")[0] || "Family member";
   const { data: inserted, error } = await supabase
-    .from("profiles")
-    .insert({ id: userId, display_name })
-    .select("id, display_name")
+    .from("users")
+    .insert({ id: userId, email: email ?? null, display_name })
+    .select("id, email, display_name")
     .single();
 
   if (error) throw error;
@@ -67,8 +67,8 @@ export async function getCategories(): Promise<Category[]> {
 export async function getProfiles(): Promise<Profile[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("profiles")
-    .select("id, display_name")
+    .from("users")
+    .select("id, email, display_name")
     .order("display_name");
 
   if (error) throw error;
@@ -86,7 +86,7 @@ export async function getTransactions(opts: {
   let query = supabase
     .from("transactions")
     .select(
-      "id, type, amount_bani, category_id, date, note, entered_by, created_at, category:categories(id, name, type, color), profile:profiles!entered_by(display_name)",
+      "id, type, amount_bani, category_id, date, note, entered_by, created_at, category:categories(id, name, type, color), profile:users!entered_by(display_name)",
     )
     .gte("date", start)
     .lte("date", end)
@@ -108,7 +108,7 @@ export async function getTransaction(id: string): Promise<Transaction | null> {
   const { data, error } = await supabase
     .from("transactions")
     .select(
-      "id, type, amount_bani, category_id, date, note, entered_by, created_at, category:categories(id, name, type, color), profile:profiles!entered_by(display_name)",
+      "id, type, amount_bani, category_id, date, note, entered_by, created_at, category:categories(id, name, type, color), profile:users!entered_by(display_name)",
     )
     .eq("id", id)
     .maybeSingle();

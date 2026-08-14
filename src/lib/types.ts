@@ -2,6 +2,7 @@ export type TxType = "income" | "expense";
 
 export type Profile = {
   id: string;
+  email: string | null;
   display_name: string;
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addCategory, signOut, updateCurrency, updateDisplayName } from "@/lib/actions";
+import { addCategory, updateCurrency, updateDisplayName } from "@/lib/actions";
 import type { Category, Profile } from "@/lib/types";
 
 const CURRENCIES = ["RON", "EUR", "USD", "GBP"];
@@ -73,9 +73,12 @@ export function SettingsForm({
         <ul className="divide-y divide-[var(--border)] overflow-hidden rounded-2xl bg-white">
           {profiles.map((p) => (
             <li key={p.id} className="px-4 py-3 text-sm font-medium">
-              {p.display_name}
+              <span className="block">{p.display_name}</span>
+              {p.email ? (
+                <span className="block text-xs font-normal text-[var(--muted-fg)]">{p.email}</span>
+              ) : null}
               {p.id === profile.id ? (
-                <span className="ml-2 text-xs font-normal text-[var(--muted-fg)]">you</span>
+                <span className="text-xs font-normal text-[var(--muted-fg)]">you</span>
               ) : null}
             </li>
           ))}
@@ -134,18 +137,9 @@ export function SettingsForm({
         </p>
       </section>
 
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="h-11 w-full rounded-2xl text-sm font-semibold text-[var(--expense)]"
-        >
-          Sign out
-        </button>
-      </form>
-
       <p className="text-center text-xs leading-relaxed text-[var(--muted-fg)]">
         On your phone: open this site in the browser, then use{" "}
-        <strong>Add to Home Screen</strong> so it feels like an app.
+        <strong>Add to Home Screen</strong> so it feels like an app. You stay signed in.
       </p>
     </div>
   );

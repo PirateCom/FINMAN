@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { SESSION_COOKIE_MAX_AGE } from "@/lib/session";
 
 export function isSupabaseConfigured() {
   return Boolean(
@@ -18,6 +19,11 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(url, anon, {
+    cookieOptions: {
+      maxAge: SESSION_COOKIE_MAX_AGE,
+      path: "/",
+      sameSite: "lax",
+    },
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -25,7 +31,10 @@ export async function createClient() {
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
+            cookieStore.set(name, value, {
+              ...options,
+              maxAge: SESSION_COOKIE_MAX_AGE,
+            }),
           );
         } catch {
           /* called from a Server Component — middleware refreshes sessions */
