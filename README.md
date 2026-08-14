@@ -1,4 +1,4 @@
-# Family Finances
+# FINMAN — Family Finances
 
 Shared household ledger for income and expenses. You and your wife sign in from any phone. Data lives in **Supabase**. Host it at **`finances.<your-domain>`**.
 
