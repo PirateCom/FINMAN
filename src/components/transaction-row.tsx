@@ -13,7 +13,7 @@ export function TransactionRow({
   return (
     <Link
       href={`/edit/${tx.id}`}
-      className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3"
+      className="flex items-center gap-3 rounded-2xl bg-[var(--card)] px-3 py-3"
     >
       <span
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white"

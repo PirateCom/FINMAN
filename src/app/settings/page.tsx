@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { SettingsForm } from "@/components/settings-form";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   ensureProfile,
   getCategories,
-  getProfiles,
   getSettings,
   getUser,
 } from "@/lib/data";
@@ -15,18 +15,16 @@ export default async function SettingsPage() {
   const user = await getUser();
   if (!user) redirect("/login");
 
-  const [profile, profiles, settings, categories] = await Promise.all([
+  const [profile, settings, categories] = await Promise.all([
     ensureProfile(user.id, user.email),
-    getProfiles(),
     getSettings(),
     getCategories(),
   ]);
 
   return (
-    <AppShell title="Settings">
+    <AppShell title="Settings" action={<ThemeToggle />}>
       <SettingsForm
         profile={profile}
-        profiles={profiles}
         currency={settings.currency}
         categories={categories}
       />

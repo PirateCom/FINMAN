@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { TransactionForm } from "@/components/transaction-form";
 import {
   ensureProfile,
@@ -30,7 +31,7 @@ export default async function EditPage({
   if (!tx) notFound();
 
   return (
-    <AppShell title="Edit">
+    <AppShell title="Edit" action={<ThemeToggle />}>
       <TransactionForm
         categories={categories}
         currency={settings.currency}

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -32,8 +33,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${plusJakarta.variable} bg-[var(--background)] antialiased`}>
+        <Script id="finman-theme" strategy="beforeInteractive">
+          {`try{if(localStorage.getItem('finman-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}`}
+        </Script>
         {children}
       </body>
     </html>

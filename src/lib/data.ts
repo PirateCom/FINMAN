@@ -44,7 +44,7 @@ export async function getSettings(): Promise<Settings> {
 
   const { data: inserted, error: insertError } = await supabase
     .from("settings")
-    .insert({ id: 1, currency: "RON" })
+    .insert({ id: 1, currency: "SEK" })
     .select("id, currency")
     .single();
 
@@ -101,6 +101,28 @@ export async function getTransactions(opts: {
   if (error) throw error;
 
   return (data ?? []).map(normalizeTransaction);
+}
+
+export async function getAllTransactions(): Promise<Transaction[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select(
+      "id, type, amount_bani, category_id, date, note, entered_by, created_at, category:categories(id, name, type, color), profile:users!entered_by(display_name)",
+    )
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map(normalizeTransaction);
+}
+
+export function byPerson(transactions: Transaction[], userId: string) {
+  return transactions.filter((tx) => tx.entered_by === userId);
+}
+
+export function parseScope(value: string | undefined): "family" | "you" {
+  return value === "you" ? "you" : "family";
 }
 
 export async function getTransaction(id: string): Promise<Transaction | null> {

@@ -8,14 +8,14 @@ Shared household ledger for income and expenses. You and your wife sign in from 
 - Shared income / expense ledger with categories
 - Monthly totals and history
 - Two users, same household data
-- Default currency **RON** (change in Settings)
+- Default currency **SEK** (RON and EUR in Settings)
 
 ## 1. Create a new Supabase project
 
 Do **not** reuse the Tocab store project.
 
 1. Open [https://supabase.com](https://supabase.com) → New project.
-2. SQL Editor → paste and run [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql), then [`supabase/migrations/002_users.sql`](supabase/migrations/002_users.sql) (creates the `users` table).
+2. SQL Editor → paste and run [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql), then [`supabase/migrations/002_users.sql`](supabase/migrations/002_users.sql), then [`supabase/migrations/003_currency_sek.sql`](supabase/migrations/003_currency_sek.sql) (default currency SEK).
 3. **Authentication → Providers → Email**: leave email/password on.
 4. **Authentication → Providers → Email**: turn **off** “Confirm email” so signup logs you in immediately.
 5. Leave **Allow new users to sign up** **on**. Each person creates their own account the first time they open the app.

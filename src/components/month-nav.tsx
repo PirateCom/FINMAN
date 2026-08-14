@@ -20,7 +20,7 @@ export function MonthNav({
     <div className="mb-4 flex items-center justify-between">
       <Link
         href={`${basePath}?month=${prev.param}${suffix}`}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--card)] text-lg"
         aria-label="Previous month"
       >
         ‹
@@ -28,7 +28,7 @@ export function MonthNav({
       <p className="text-sm font-semibold">{monthLabel(year, month)}</p>
       <Link
         href={`${basePath}?month=${next.param}${suffix}`}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--card)] text-lg"
         aria-label="Next month"
       >
         ›

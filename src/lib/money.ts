@@ -11,7 +11,9 @@ export function baniToInput(bani: number): string {
 }
 
 export function formatMoney(bani: number, currency: string): string {
-  return new Intl.NumberFormat("ro-RO", {
+  const locale =
+    currency === "SEK" ? "sv-SE" : currency === "EUR" ? "de-DE" : "ro-RO";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     maximumFractionDigits: 2,

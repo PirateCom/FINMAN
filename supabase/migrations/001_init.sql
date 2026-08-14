@@ -10,11 +10,11 @@ create table public.users (
 
 create table public.settings (
   id int primary key default 1 check (id = 1),
-  currency text not null default 'RON',
+  currency text not null default 'SEK',
   updated_at timestamptz not null default now()
 );
 
-insert into public.settings (id, currency) values (1, 'RON');
+insert into public.settings (id, currency) values (1, 'SEK');
 
 create table public.categories (
   id uuid primary key default gen_random_uuid(),

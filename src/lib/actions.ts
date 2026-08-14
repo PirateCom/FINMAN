@@ -163,7 +163,7 @@ export async function updateDisplayName(formData: FormData): Promise<{ error?: s
 
 export async function updateCurrency(formData: FormData): Promise<{ error?: string }> {
   const { supabase } = await requireUser();
-  const currency = String(formData.get("currency") ?? "RON");
+  const currency = String(formData.get("currency") ?? "SEK");
   const { error } = await supabase
     .from("settings")
     .update({ currency, updated_at: new Date().toISOString() })

@@ -92,7 +92,7 @@ export function TransactionForm({
             required
             defaultValue={transaction ? baniToInput(transaction.amount_bani) : ""}
             placeholder="0.00"
-            className="h-16 w-full rounded-2xl border border-[var(--border)] bg-white px-4 pr-16 text-3xl font-semibold tracking-tight outline-none ring-[var(--accent)] focus:ring-2"
+            className="h-16 w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 pr-16 text-3xl font-semibold tracking-tight outline-none ring-[var(--accent)] focus:ring-2"
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[var(--muted-fg)]">
             {currency}
@@ -137,7 +137,7 @@ export function TransactionForm({
                 type="button"
                 onClick={() => setCategoryId(cat.id)}
                 className={`rounded-full px-3.5 py-2 text-sm font-medium ${
-                  selected ? "text-white" : "bg-white text-[var(--foreground)]"
+                  selected ? "text-white" : "bg-[var(--card)] text-[var(--foreground)]"
                 }`}
                 style={{
                   backgroundColor: selected ? cat.color : undefined,
@@ -158,7 +158,7 @@ export function TransactionForm({
           type="date"
           required
           defaultValue={transaction?.date ?? todayISO()}
-          className="h-12 rounded-2xl border border-[var(--border)] bg-white px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
+          className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
         />
       </label>
 
@@ -168,7 +168,7 @@ export function TransactionForm({
           name="note"
           defaultValue={transaction?.note ?? ""}
           placeholder="What was this for?"
-          className="h-12 rounded-2xl border border-[var(--border)] bg-white px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
+          className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
         />
       </label>
 

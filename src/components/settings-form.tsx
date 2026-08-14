@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { addCategory, updateCurrency, updateDisplayName } from "@/lib/actions";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { Category, Profile } from "@/lib/types";
 
-const CURRENCIES = ["RON", "EUR", "USD", "GBP"];
+const CURRENCIES = ["SEK", "EUR", "RON"];
 
 export function SettingsForm({
   profile,
-  profiles,
   currency,
   categories,
 }: {
   profile: Profile;
-  profiles: Profile[];
   currency: string;
   categories: Category[];
 }) {
@@ -43,8 +43,20 @@ export function SettingsForm({
   return (
     <div className="flex flex-col gap-8">
       {saved ? (
-        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{saved}</p>
+        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+          {saved}
+        </p>
       ) : null}
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--muted-fg)]">
+          Appearance
+        </h2>
+        <div className="flex items-center justify-between rounded-2xl bg-[var(--card)] px-4 py-3">
+          <span className="text-sm font-medium">Day / night</span>
+          <ThemeToggle />
+        </div>
+      </section>
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--muted-fg)]">
@@ -54,7 +66,7 @@ export function SettingsForm({
           <input
             name="display_name"
             defaultValue={profile.display_name}
-            className="h-12 rounded-2xl border border-[var(--border)] bg-white px-4 outline-none ring-[var(--accent)] focus:ring-2"
+            className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 outline-none ring-[var(--accent)] focus:ring-2"
           />
           {nameError ? <p className="text-sm text-red-700">{nameError}</p> : null}
           <button
@@ -70,19 +82,13 @@ export function SettingsForm({
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--muted-fg)]">
           Household
         </h2>
-        <ul className="divide-y divide-[var(--border)] overflow-hidden rounded-2xl bg-white">
-          {profiles.map((p) => (
-            <li key={p.id} className="px-4 py-3 text-sm font-medium">
-              <span className="block">{p.display_name}</span>
-              {p.email ? (
-                <span className="block text-xs font-normal text-[var(--muted-fg)]">{p.email}</span>
-              ) : null}
-              {p.id === profile.id ? (
-                <span className="text-xs font-normal text-[var(--muted-fg)]">you</span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <Link
+          href="/family"
+          className="flex h-12 items-center justify-between rounded-2xl bg-[var(--card)] px-4 text-sm font-semibold"
+        >
+          Family members
+          <span className="text-[var(--muted-fg)]">›</span>
+        </Link>
       </section>
 
       <section>
@@ -94,7 +100,7 @@ export function SettingsForm({
             name="currency"
             defaultValue={currency}
             onChange={(e) => e.currentTarget.form?.requestSubmit()}
-            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-white px-4 outline-none"
+            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 outline-none"
           >
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>
@@ -113,11 +119,11 @@ export function SettingsForm({
           <input
             name="name"
             placeholder="Name"
-            className="h-12 rounded-2xl border border-[var(--border)] bg-white px-4 outline-none ring-[var(--accent)] focus:ring-2"
+            className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 outline-none ring-[var(--accent)] focus:ring-2"
           />
           <select
             name="type"
-            className="h-12 rounded-2xl border border-[var(--border)] bg-white px-4"
+            className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4"
             defaultValue="expense"
           >
             <option value="expense">Expense</option>
@@ -127,7 +133,7 @@ export function SettingsForm({
           {catError ? <p className="text-sm text-red-700">{catError}</p> : null}
           <button
             type="submit"
-            className="h-11 rounded-2xl border border-[var(--border)] bg-white font-semibold"
+            className="h-11 rounded-2xl border border-[var(--border)] bg-[var(--card)] font-semibold"
           >
             Add category
           </button>

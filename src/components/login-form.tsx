@@ -28,7 +28,7 @@ export function LoginForm() {
             setError(null);
           }}
           className={`h-10 rounded-xl text-sm font-semibold ${
-            mode === "signup" ? "bg-white text-[var(--foreground)] shadow-sm" : "text-[var(--muted-fg)]"
+            mode === "signup" ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm" : "text-[var(--muted-fg)]"
           }`}
         >
           Sign up
@@ -40,7 +40,7 @@ export function LoginForm() {
             setError(null);
           }}
           className={`h-10 rounded-xl text-sm font-semibold ${
-            mode === "signin" ? "bg-white text-[var(--foreground)] shadow-sm" : "text-[var(--muted-fg)]"
+            mode === "signin" ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm" : "text-[var(--muted-fg)]"
           }`}
         >
           Sign in
@@ -57,7 +57,7 @@ export function LoginForm() {
               autoComplete="username"
               required
               placeholder="Your name"
-              className="h-12 rounded-2xl border border-[var(--border)] bg-white px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
+              className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
             />
           </label>
         ) : null}
@@ -68,7 +68,7 @@ export function LoginForm() {
             type="email"
             autoComplete="email"
             required
-            className="h-12 rounded-2xl border border-[var(--border)] bg-white px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
+            className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
           />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -79,7 +79,7 @@ export function LoginForm() {
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
             required
             minLength={6}
-            className="h-12 rounded-2xl border border-[var(--border)] bg-white px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
+            className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
           />
         </label>
         {error ? (

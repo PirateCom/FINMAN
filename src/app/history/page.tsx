@@ -2,22 +2,28 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { MonthNav } from "@/components/month-nav";
+import { ScopeToggle } from "@/components/scope-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { TotalsCard } from "@/components/totals-card";
 import { TransactionRow } from "@/components/transaction-row";
 import {
+  byPerson,
   ensureProfile,
+  getAllTransactions,
   getSettings,
   getTransactions,
   getUser,
   monthTotals,
+  parseScope,
 } from "@/lib/data";
-import { formatMoney, parseMonthParam } from "@/lib/money";
+import { parseMonthParam } from "@/lib/money";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import type { TxType } from "@/lib/types";
 
 export default async function HistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; type?: string }>;
+  searchParams: Promise<{ month?: string; type?: string; scope?: string }>;
 }) {
   if (!isSupabaseConfigured()) redirect("/login");
   const user = await getUser();
@@ -29,11 +35,18 @@ export default async function HistoryPage({
   const type = (["all", "income", "expense"].includes(q.type ?? "")
     ? q.type
     : "all") as TxType | "all";
+  const scope = parseScope(q.scope);
 
   const settings = await getSettings();
-  const all = await getTransactions({ year, month });
-  const transactions = type === "all" ? all : all.filter((tx) => tx.type === type);
-  const { income, expense } = monthTotals(all);
+  const [monthAll, allTime] = await Promise.all([
+    getTransactions({ year, month }),
+    getAllTransactions(),
+  ]);
+
+  const scopedMonth = scope === "you" ? byPerson(monthAll, user.id) : monthAll;
+  const scopedAll = scope === "you" ? byPerson(allTime, user.id) : allTime;
+  const listed =
+    type === "all" ? scopedMonth : scopedMonth.filter((tx) => tx.type === type);
 
   const filters: { id: TxType | "all"; label: string }[] = [
     { id: "all", label: "All" },
@@ -42,30 +55,50 @@ export default async function HistoryPage({
   ];
 
   const monthParam = `${year}-${String(month).padStart(2, "0")}`;
+  const extra = [
+    type !== "all" ? `type=${type}` : "",
+    scope === "you" ? "scope=you" : "",
+  ]
+    .filter(Boolean)
+    .join("&");
+
+  function historyHref(next: { type?: string; scope?: string }) {
+    const params = new URLSearchParams();
+    params.set("month", monthParam);
+    const nextType = next.type ?? type;
+    const nextScope = next.scope ?? scope;
+    if (nextType !== "all") params.set("type", nextType);
+    if (nextScope === "you") params.set("scope", "you");
+    return `/history?${params.toString()}`;
+  }
 
   return (
-    <AppShell title="History">
-      <MonthNav
-        year={year}
-        month={month}
-        basePath="/history"
-        extraQuery={type !== "all" ? `type=${type}` : ""}
+    <AppShell title="History" action={<ThemeToggle />}>
+      <ScopeToggle
+        current={scope}
+        familyHref={historyHref({ scope: "family" })}
+        youHref={historyHref({ scope: "you" })}
       />
 
-      <p className="mb-4 text-center text-sm text-[var(--muted-fg)]">
-        In {formatMoney(income, settings.currency)} · Out{" "}
-        {formatMoney(expense, settings.currency)}
-      </p>
+      <MonthNav year={year} month={month} basePath="/history" extraQuery={extra} />
+
+      <div className="mb-4">
+        <TotalsCard
+          month={monthTotals(scopedMonth)}
+          allTime={monthTotals(scopedAll)}
+          currency={settings.currency}
+        />
+      </div>
 
       <div className="mb-4 grid grid-cols-3 gap-2">
         {filters.map((f) => (
           <Link
             key={f.id}
-            href={`/history?month=${monthParam}&type=${f.id}`}
+            href={historyHref({ type: f.id })}
             className={`h-10 rounded-full text-center text-sm font-semibold leading-10 ${
               type === f.id
-                ? "bg-[var(--accent)] text-white"
-                : "bg-white text-[var(--muted-fg)]"
+                ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                : "bg-[var(--card)] text-[var(--muted-fg)]"
             }`}
           >
             {f.label}
@@ -74,11 +107,11 @@ export default async function HistoryPage({
       </div>
 
       <div className="flex flex-col gap-2">
-        {transactions.map((tx) => (
+        {listed.map((tx) => (
           <TransactionRow key={tx.id} tx={tx} currency={settings.currency} />
         ))}
-        {transactions.length === 0 ? (
-          <p className="rounded-2xl bg-white px-4 py-8 text-center text-sm text-[var(--muted-fg)]">
+        {listed.length === 0 ? (
+          <p className="rounded-2xl bg-[var(--card)] px-4 py-8 text-center text-sm text-[var(--muted-fg)]">
             Nothing in this month yet.
           </p>
         ) : null}
