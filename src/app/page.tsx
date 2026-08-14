@@ -1,103 +1,87 @@
-import Image from "next/image";
+import { redirect } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { TransactionRow } from "@/components/transaction-row";
+import {
+  ensureProfile,
+  getSettings,
+  getTransactions,
+  getUser,
+  monthTotals,
+} from "@/lib/data";
+import { formatMoney, monthLabel, parseMonthParam } from "@/lib/money";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
+import type { Transaction } from "@/lib/types";
 
-export default function Home() {
+export default async function HomePage() {
+  if (!isSupabaseConfigured()) redirect("/login");
+  const user = await getUser();
+  if (!user) redirect("/login");
+
+  const profile = await ensureProfile(user.id, user.email);
+  const { year, month } = parseMonthParam(undefined);
+  let transactions: Transaction[] = [];
+  let currency = "RON";
+  let loadError: string | null = null;
+
+  try {
+    const settings = await getSettings();
+    currency = settings.currency;
+    transactions = await getTransactions({ year, month });
+  } catch {
+    loadError = "Could not load data. Run the SQL migration in your new Supabase project.";
+  }
+
+  const { income, expense, net } = monthTotals(transactions);
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <AppShell>
+      <p className="text-sm text-[var(--muted-fg)]">Hello, {profile.display_name}</p>
+      <h1 className="mt-1 text-2xl font-semibold tracking-tight">This month</h1>
+      <p className="mb-5 mt-1 text-sm text-[var(--muted-fg)]">{monthLabel(year, month)}</p>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      {loadError ? (
+        <p className="rounded-2xl bg-red-50 p-4 text-sm text-red-800">{loadError}</p>
+      ) : (
+        <>
+          <div className="rounded-[28px] bg-[var(--accent)] px-5 py-6 text-[var(--accent-fg)]">
+            <p className="text-sm opacity-80">Balance</p>
+            <p className="mt-1 text-3xl font-semibold tracking-tight">
+              {formatMoney(net, currency)}
+            </p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-white p-4">
+              <p className="text-xs font-medium text-[var(--muted-fg)]">Income</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--income)]">
+                {formatMoney(income, currency)}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white p-4">
+              <p className="text-xs font-medium text-[var(--muted-fg)]">Expenses</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--expense)]">
+                {formatMoney(expense, currency)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted-fg)]">
+              Recent
+            </h2>
+          </div>
+          <div className="mt-3 flex flex-col gap-2">
+            {transactions.slice(0, 8).map((tx) => (
+              <TransactionRow key={tx.id} tx={tx} currency={currency} />
+            ))}
+            {transactions.length === 0 ? (
+              <p className="rounded-2xl bg-white px-4 py-8 text-center text-sm text-[var(--muted-fg)]">
+                No transactions yet. Tap Add to record income or an expense.
+              </p>
+            ) : null}
+          </div>
+        </>
+      )}
+    </AppShell>
   );
 }
