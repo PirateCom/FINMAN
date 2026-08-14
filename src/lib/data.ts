@@ -1,8 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import { loadFxSnapshot } from "@/lib/fx-server";
 import { monthBounds, todayISO, type MoneyContext } from "@/lib/money";
-import { dueSoonUntilISO } from "@/lib/reminders";
-import type { Category, Profile, Reminder, RepeatMonths, Settings, Transaction, TxType } from "@/lib/types";
+import { addCalendarMonths, dueSoonUntilISO } from "@/lib/reminders";
+import type {
+  Category,
+  Profile,
+  RecurringInterval,
+  RecurringPayment,
+  Reminder,
+  RepeatMonths,
+  Settings,
+  Transaction,
+  TxType,
+} from "@/lib/types";
 
 export async function getUser() {
   const supabase = await createClient();
@@ -101,6 +111,9 @@ export async function getProfiles(): Promise<Profile[]> {
   return (data ?? []) as Profile[];
 }
 
+const transactionSelect =
+  "id, type, amount_bani, category_id, date, note, entered_by, created_at, recurring_payment_id, category:categories(id, name, type, color), profile:users!entered_by(display_name)";
+
 export async function getTransactions(opts: {
   year: number;
   month: number;
@@ -112,7 +125,7 @@ export async function getTransactions(opts: {
   let query = supabase
     .from("transactions")
     .select(
-      "id, type, amount_bani, category_id, date, note, entered_by, created_at, category:categories(id, name, type, color), profile:users!entered_by(display_name)",
+      transactionSelect,
     )
     .gte("date", start)
     .lte("date", end)
@@ -134,7 +147,7 @@ export async function getAllTransactions(): Promise<Transaction[]> {
   const { data, error } = await supabase
     .from("transactions")
     .select(
-      "id, type, amount_bani, category_id, date, note, entered_by, created_at, category:categories(id, name, type, color), profile:users!entered_by(display_name)",
+      transactionSelect,
     )
     .order("date", { ascending: false })
     .order("created_at", { ascending: false });
@@ -156,7 +169,7 @@ export async function getTransaction(id: string): Promise<Transaction | null> {
   const { data, error } = await supabase
     .from("transactions")
     .select(
-      "id, type, amount_bani, category_id, date, note, entered_by, created_at, category:categories(id, name, type, color), profile:users!entered_by(display_name)",
+      transactionSelect,
     )
     .eq("id", id)
     .maybeSingle();
@@ -178,9 +191,131 @@ function normalizeTransaction(row: Record<string, unknown>): Transaction {
     note: (row.note as string | null) ?? null,
     entered_by: row.entered_by as string,
     created_at: row.created_at as string,
+    recurring_payment_id: (row.recurring_payment_id as string | null) ?? null,
     category: (category as Category | null) ?? null,
     profile: (profile as { display_name: string } | null) ?? null,
   };
+}
+
+const recurringSelect =
+  "id, title, type, amount_bani, category_id, note, interval_months, next_date, end_date, active, created_by, created_at, updated_at, category:categories(id, name, type, color)";
+
+function normalizeRecurring(row: Record<string, unknown>): RecurringPayment {
+  const category = Array.isArray(row.category) ? row.category[0] : row.category;
+  const interval = Number(row.interval_months);
+  const interval_months: RecurringInterval =
+    interval === 3 || interval === 6 || interval === 12 ? interval : 1;
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    type: row.type as TxType,
+    amount_bani: row.amount_bani as number,
+    category_id: (row.category_id as string | null) ?? null,
+    note: (row.note as string | null) ?? null,
+    interval_months,
+    next_date: row.next_date as string,
+    end_date: (row.end_date as string | null) ?? null,
+    active: Boolean(row.active),
+    created_by: row.created_by as string,
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string,
+    category: (category as Category | null) ?? null,
+  };
+}
+
+/** Posts due standing orders, then advances next_date. Safe to call on page load. */
+export async function applyDueRecurringPayments() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const today = todayISO();
+  const { data: rules, error } = await supabase
+    .from("recurring_payments")
+    .select(
+      "id, title, type, amount_bani, category_id, note, interval_months, next_date, end_date",
+    )
+    .eq("active", true)
+    .lte("next_date", today);
+
+  if (error) throw error;
+
+  for (const rule of rules ?? []) {
+    let next = rule.next_date as string;
+    const interval = Number(rule.interval_months) || 1;
+    const end = (rule.end_date as string | null) ?? null;
+    let posted = 0;
+
+    while (next <= today && posted < 24) {
+      if (end && next > end) break;
+      const note = [rule.title, rule.note].filter(Boolean).join(" — ");
+      const { error: txError } = await supabase.from("transactions").insert({
+        type: rule.type,
+        amount_bani: rule.amount_bani,
+        category_id: rule.category_id,
+        date: next,
+        note,
+        entered_by: user.id,
+        recurring_payment_id: rule.id,
+      });
+      if (txError && txError.code !== "23505") throw txError;
+      next = addCalendarMonths(next, interval);
+      posted += 1;
+    }
+
+    const stillActive = !(end && next > end);
+    const { error: updateError } = await supabase
+      .from("recurring_payments")
+      .update({
+        next_date: stillActive ? next : (end ?? next),
+        active: stillActive,
+      })
+      .eq("id", rule.id);
+    if (updateError) throw updateError;
+  }
+}
+
+export async function getRecurringPayments(): Promise<RecurringPayment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("recurring_payments")
+    .select(recurringSelect)
+    .order("active", { ascending: false })
+    .order("next_date", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => normalizeRecurring(row as Record<string, unknown>));
+}
+
+export async function getRecurringPayment(id: string): Promise<RecurringPayment | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("recurring_payments")
+    .select(recurringSelect)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return normalizeRecurring(data as Record<string, unknown>);
+}
+
+export async function getUpcomingRecurring(): Promise<RecurringPayment[]> {
+  const supabase = await createClient();
+  const today = todayISO();
+  const until = addCalendarMonths(today, 1);
+  const { data, error } = await supabase
+    .from("recurring_payments")
+    .select(recurringSelect)
+    .eq("active", true)
+    .gte("next_date", today)
+    .lte("next_date", until)
+    .order("next_date", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => normalizeRecurring(row as Record<string, unknown>));
 }
 
 export async function getSavingsByUser(): Promise<Record<string, number>> {
@@ -207,6 +342,71 @@ export function monthTotals(transactions: Transaction[]) {
     else expense += tx.amount_bani;
   }
   return { income, expense, net: income - expense };
+}
+
+export type RemainingDay = {
+  day: number;
+  remaining: number;
+  pct: number;
+};
+
+export type RemainingSeries = {
+  days: RemainingDay[];
+  income: number;
+  lastDay: number;
+  todayDay: number;
+  isCurrentMonth: boolean;
+  currentPct: number;
+  currentRemaining: number;
+};
+
+/** 100% = month income; remaining falls as expenses land through the month. */
+export function remainingOfIncome(
+  transactions: Transaction[],
+  year: number,
+  month: number,
+): RemainingSeries {
+  const { start, end } = monthBounds(year, month);
+  const lastDay = Number(end.slice(-2));
+  const today = todayISO();
+  const isCurrentMonth = today >= start && today <= end;
+  const todayDay = isCurrentMonth ? Number(today.slice(-2)) : lastDay;
+
+  let income = 0;
+  const expenseByDay = Array.from({ length: lastDay + 1 }, () => 0);
+  for (const tx of transactions) {
+    if (tx.type === "income") {
+      income += tx.amount_bani;
+      continue;
+    }
+    const day = Number(tx.date.slice(-2));
+    if (day >= 1 && day <= lastDay) expenseByDay[day] += tx.amount_bani;
+  }
+
+  let spent = 0;
+  const days: RemainingDay[] = [];
+  for (let day = 1; day <= lastDay; day++) {
+    spent += expenseByDay[day];
+    const remaining = income - spent;
+    const pct = income > 0 ? (remaining / income) * 100 : 0;
+    days.push({ day, remaining, pct });
+  }
+
+  const current = days[Math.max(0, todayDay - 1)] ?? {
+    day: todayDay,
+    remaining: income,
+    pct: income > 0 ? 100 : 0,
+  };
+
+  return {
+    days,
+    income,
+    lastDay,
+    todayDay,
+    isCurrentMonth,
+    currentPct: current.pct,
+    currentRemaining: current.remaining,
+  };
 }
 
 const reminderSelect =

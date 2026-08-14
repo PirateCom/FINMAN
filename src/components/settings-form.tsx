@@ -98,6 +98,13 @@ export function SettingsForm({
           Payment reminders
           <span className="text-[var(--muted-fg)]">›</span>
         </Link>
+        <Link
+          href="/recurring"
+          className="mt-2 flex h-12 items-center justify-between rounded-2xl bg-[var(--card)] px-4 text-sm font-semibold"
+        >
+          Automatic payments
+          <span className="text-[var(--muted-fg)]">›</span>
+        </Link>
       </section>
 
       <section>

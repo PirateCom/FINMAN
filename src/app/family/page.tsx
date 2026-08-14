@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { SavingsForm } from "@/components/savings-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
+  applyDueRecurringPayments,
   byPerson,
   ensureProfile,
   getAllTransactions,
@@ -23,6 +24,11 @@ export default async function FamilyPage() {
   await ensureProfile(user.id, user.email);
 
   const { year, month } = parseMonthParam(undefined);
+  try {
+    await applyDueRecurringPayments();
+  } catch {
+    /* ignore */
+  }
   const [members, money, monthTx, allTx] = await Promise.all([
     getProfiles(),
     getMoneyContext(),
@@ -51,7 +57,7 @@ export default async function FamilyPage() {
         {members.length} {members.length === 1 ? "member" : "members"} · {monthLabel(year, month)}
       </p>
 
-      <div className="mb-4 overflow-hidden rounded-[28px] bg-[var(--accent)] text-[var(--accent-fg)]">
+      <div className="mb-4 overflow-hidden rounded-2xl bg-[var(--accent)] text-[var(--accent-fg)]">
         <div className="px-5 py-5">
           <p className="text-sm opacity-80">Household savings</p>
           <p className="mt-1 text-3xl font-semibold tracking-tight">

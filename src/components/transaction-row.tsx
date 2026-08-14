@@ -27,6 +27,7 @@ export function TransactionRow({
         </span>
         <span className="block truncate text-xs text-[var(--muted-fg)]">
           {tx.note || tx.profile?.display_name || "Household"}
+          {tx.recurring_payment_id ? " · Auto" : ""}
         </span>
       </span>
       <span

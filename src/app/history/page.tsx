@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { TotalsCard } from "@/components/totals-card";
 import { TransactionRow } from "@/components/transaction-row";
 import {
+  applyDueRecurringPayments,
   byPerson,
   ensureProfile,
   getAllTransactions,
@@ -36,6 +37,12 @@ export default async function HistoryPage({
     ? q.type
     : "all") as TxType | "all";
   const scope = parseScope(q.scope);
+
+  try {
+    await applyDueRecurringPayments();
+  } catch {
+    /* ignore — history still loads existing rows */
+  }
 
   const [monthAll, allTime, money] = await Promise.all([
     getTransactions({ year, month }),
@@ -87,6 +94,9 @@ export default async function HistoryPage({
           month={monthTotals(scopedMonth)}
           allTime={monthTotals(scopedAll)}
           money={money}
+          transactions={scopedMonth}
+          year={year}
+          monthIndex={month}
         />
       </div>
 

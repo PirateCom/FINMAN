@@ -2,30 +2,29 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addCategory, deleteTransaction, saveTransaction } from "@/lib/actions";
+import { deleteRecurringPayment, saveRecurringPayment } from "@/lib/actions";
 import { baniToInput, todayISO, toDisplayBani, type MoneyContext } from "@/lib/money";
 import { RECURRING_INTERVALS } from "@/lib/recurring";
-import type { Category, RecurringInterval, Transaction, TxType } from "@/lib/types";
+import type { Category, RecurringInterval, RecurringPayment, TxType } from "@/lib/types";
 
-export function TransactionForm({
+export function RecurringForm({
   categories,
   money,
-  transaction,
+  payment,
 }: {
   categories: Category[];
   money: MoneyContext;
-  transaction?: Transaction;
+  payment?: RecurringPayment;
 }) {
   const router = useRouter();
-  const [type, setType] = useState<TxType>(transaction?.type ?? "expense");
-  const [categoryId, setCategoryId] = useState(transaction?.category_id ?? "");
+  const [type, setType] = useState<TxType>(payment?.type ?? "expense");
+  const [categoryId, setCategoryId] = useState(payment?.category_id ?? "");
+  const [interval, setInterval] = useState<RecurringInterval>(payment?.interval_months ?? 1);
+  const [active, setActive] = useState(payment?.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [addingCategory, setAddingCategory] = useState(false);
-  const [newCategory, setNewCategory] = useState("");
-  const [repeat, setRepeat] = useState<RecurringInterval | 0>(0);
-  const amountShown = transaction
-    ? toDisplayBani(transaction.amount_bani, money)
+  const amountShown = payment
+    ? toDisplayBani(payment.amount_bani, money)
     : { bani: 0, currency: money.display };
 
   const visible = useMemo(
@@ -38,34 +37,18 @@ export function TransactionForm({
     setError(null);
     formData.set("type", type);
     formData.set("category_id", categoryId);
-    if (!transaction && repeat) formData.set("repeat_months", String(repeat));
-    const result = await saveTransaction(formData);
+    formData.set("interval_months", String(interval));
+    formData.set("active", active ? "true" : "false");
+    const result = await saveRecurringPayment(formData);
     if (result?.error) {
       setError(result.error);
       setPending(false);
     }
   }
 
-  async function onAddCategory() {
-    const name = newCategory.trim();
-    if (!name) return;
-    const formData = new FormData();
-    formData.set("name", name);
-    formData.set("type", type);
-    formData.set("color", type === "income" ? "#0F766E" : "#C45C26");
-    const result = await addCategory(formData);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    setNewCategory("");
-    setAddingCategory(false);
-    router.refresh();
-  }
-
   return (
     <form action={onSubmit} className="flex flex-col gap-5">
-      {transaction ? <input type="hidden" name="id" value={transaction.id} /> : null}
+      {payment ? <input type="hidden" name="id" value={payment.id} /> : null}
 
       <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[var(--muted)] p-1">
         {(["expense", "income"] as const).map((value) => (
@@ -90,14 +73,25 @@ export function TransactionForm({
       </div>
 
       <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-[var(--muted-fg)]">Name</span>
+        <input
+          name="title"
+          required
+          defaultValue={payment?.title ?? ""}
+          placeholder="Stocks"
+          className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 outline-none ring-[var(--accent)] focus:ring-2"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-[var(--muted-fg)]">Amount</span>
         <div className="relative">
           <input
             name="amount"
             inputMode="decimal"
             required
-            defaultValue={transaction ? baniToInput(amountShown.bani) : ""}
-            placeholder="0.00"
+            defaultValue={payment ? baniToInput(amountShown.bani) : ""}
+            placeholder="3500.00"
             className="h-16 w-full rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 pr-16 text-3xl font-semibold tracking-tight outline-none ring-[var(--accent)] focus:ring-2"
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-[var(--muted-fg)]">
@@ -107,33 +101,7 @@ export function TransactionForm({
       </label>
 
       <div>
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm font-medium text-[var(--muted-fg)]">Category</span>
-          <button
-            type="button"
-            onClick={() => setAddingCategory((v) => !v)}
-            className="text-sm font-semibold text-[var(--accent)]"
-          >
-            {addingCategory ? "Cancel" : "+ New"}
-          </button>
-        </div>
-        {addingCategory ? (
-          <div className="mb-3 flex gap-2">
-            <input
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="Category name"
-              className="h-11 flex-1 rounded-xl border border-[var(--border)] px-3 text-sm outline-none ring-[var(--accent)] focus:ring-2"
-            />
-            <button
-              type="button"
-              onClick={onAddCategory}
-              className="h-11 rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-white"
-            >
-              Save
-            </button>
-          </div>
-        ) : null}
+        <span className="mb-2 block text-sm font-medium text-[var(--muted-fg)]">Category</span>
         <div className="flex flex-wrap gap-2">
           {visible.map((cat) => {
             const selected = categoryId === cat.id;
@@ -141,7 +109,7 @@ export function TransactionForm({
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => setCategoryId(cat.id)}
+                onClick={() => setCategoryId(selected ? "" : cat.id)}
                 className={`rounded-full px-3.5 py-2 text-sm font-medium ${
                   selected ? "text-white" : "bg-[var(--card)] text-[var(--foreground)]"
                 }`}
@@ -158,49 +126,56 @@ export function TransactionForm({
       </div>
 
       <label className="flex flex-col gap-1.5 text-sm font-medium">
-        Date
+        Next payment
         <input
-          name="date"
+          name="next_date"
           type="date"
           required
-          defaultValue={transaction?.date ?? todayISO()}
+          defaultValue={payment?.next_date ?? todayISO()}
           className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
         />
       </label>
 
-      {!transaction ? (
-        <label className="flex flex-col gap-1.5 text-sm font-medium">
-          Repeat
-          <select
-            name="repeat_months"
-            value={repeat}
-            onChange={(e) => setRepeat(Number(e.target.value) as RecurringInterval | 0)}
-            className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
-          >
-            <option value={0}>Once</option>
-            {RECURRING_INTERVALS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          {repeat ? (
-            <span className="font-normal text-[var(--muted-fg)]">
-              This amount will be added again automatically {RECURRING_INTERVALS.find((o) => o.value === repeat)?.label.toLowerCase()}.
-            </span>
-          ) : null}
-        </label>
-      ) : null}
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
+        Repeat
+        <select
+          name="interval_months"
+          value={interval}
+          onChange={(e) => setInterval(Number(e.target.value) as RecurringInterval)}
+          className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
+        >
+          {RECURRING_INTERVALS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <label className="flex flex-col gap-1.5 text-sm font-medium">
         Note <span className="font-normal text-[var(--muted-fg)]">(optional)</span>
         <input
           name="note"
-          defaultValue={transaction?.note ?? ""}
-          placeholder="What was this for?"
+          defaultValue={payment?.note ?? ""}
+          placeholder="Avanza, ISK, …"
           className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
         />
       </label>
+
+      {payment ? (
+        <button
+          type="button"
+          onClick={() => setActive((v) => !v)}
+          className="flex h-12 items-center justify-between rounded-2xl bg-[var(--card)] px-4 text-sm font-semibold"
+        >
+          Automatic posting
+          <span className="font-medium text-[var(--muted-fg)]">{active ? "On" : "Paused"}</span>
+        </button>
+      ) : (
+        <p className="text-sm leading-relaxed text-[var(--muted-fg)]">
+          If the next date is today or earlier, the first payment is added now. After that it posts on its own when you open the app.
+        </p>
+      )}
 
       {error ? (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -211,7 +186,7 @@ export function TransactionForm({
         disabled={pending}
         className="h-12 rounded-2xl bg-[var(--accent)] text-base font-semibold text-[var(--accent-fg)] disabled:opacity-60"
       >
-        {pending ? "Saving…" : transaction ? "Save changes" : "Add transaction"}
+        {pending ? "Saving…" : payment ? "Save changes" : "Add automatic payment"}
       </button>
 
       <button
@@ -220,7 +195,7 @@ export function TransactionForm({
           if (typeof window !== "undefined" && window.history.length > 1) {
             router.back();
           } else {
-            router.push("/");
+            router.push("/recurring");
           }
         }}
         className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] text-base font-semibold"
@@ -228,13 +203,15 @@ export function TransactionForm({
         Cancel
       </button>
 
-      {transaction ? (
+      {payment ? (
         <button
           type="submit"
-          formAction={deleteTransaction}
+          formAction={deleteRecurringPayment}
           formNoValidate
           onClick={(e) => {
-            if (!confirm("Delete this transaction?")) e.preventDefault();
+            if (!confirm("Stop this automatic payment? Past transactions stay in history.")) {
+              e.preventDefault();
+            }
           }}
           className="h-11 text-sm font-semibold text-[var(--expense)]"
         >

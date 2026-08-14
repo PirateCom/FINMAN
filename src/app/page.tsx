@@ -5,20 +5,23 @@ import { ScopeToggle } from "@/components/scope-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TotalsCard } from "@/components/totals-card";
 import { TransactionRow } from "@/components/transaction-row";
+import { UpcomingRecurring } from "@/components/upcoming-recurring";
 import {
+  applyDueRecurringPayments,
   byPerson,
   ensureProfile,
   getAllTransactions,
   getDueReminders,
   getMoneyContext,
   getTransactions,
+  getUpcomingRecurring,
   getUser,
   monthTotals,
   parseScope,
 } from "@/lib/data";
 import { monthLabel, parseMonthParam, type MoneyContext } from "@/lib/money";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
-import type { Reminder, Transaction } from "@/lib/types";
+import type { RecurringPayment, Reminder, Transaction } from "@/lib/types";
 
 export default async function HomePage({
   searchParams,
@@ -36,20 +39,24 @@ export default async function HomePage({
   let monthTx: Transaction[] = [];
   let allTx: Transaction[] = [];
   let dueReminders: Reminder[] = [];
+  let upcomingRecurring: RecurringPayment[] = [];
   let money: MoneyContext = { base: "SEK", display: "SEK", fx: null };
   let loadError: string | null = null;
 
   try {
-    const [monthData, allData, moneyContext, due] = await Promise.all([
+    await applyDueRecurringPayments();
+    const [monthData, allData, moneyContext, due, upcoming] = await Promise.all([
       getTransactions({ year, month }),
       getAllTransactions(),
       getMoneyContext(),
       getDueReminders(),
+      getUpcomingRecurring(),
     ]);
     monthTx = monthData;
     allTx = allData;
     money = moneyContext;
     dueReminders = due;
+    upcomingRecurring = upcoming;
   } catch {
     loadError = "Could not load data. Run the SQL migration in your new Supabase project.";
   }
@@ -86,7 +93,12 @@ export default async function HomePage({
             month={monthTotals(scopedMonth)}
             allTime={monthTotals(scopedAll)}
             money={money}
+            transactions={scopedMonth}
+            year={year}
+            monthIndex={month}
           />
+
+          <UpcomingRecurring payments={upcomingRecurring} money={money} />
 
           <DueReminders reminders={dueReminders} money={money} />
 

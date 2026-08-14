@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getMoneyContext } from "@/lib/data";
+import { getMoneyContext, applyDueRecurringPayments } from "@/lib/data";
 import { parseAmountToBani, todayISO, toStoredBani } from "@/lib/money";
-import { nextDueAfterPaid } from "@/lib/reminders";
+import { defaultRecurringTitle, parseRecurringInterval } from "@/lib/recurring";
+import { addCalendarMonths, nextDueAfterPaid } from "@/lib/reminders";
 import type { RepeatMonths, TxType } from "@/lib/types";
 
 async function requireUser() {
@@ -105,16 +106,50 @@ export async function saveTransaction(formData: FormData): Promise<{ error?: str
     entered_by: user.id,
   };
 
+  const interval = parseRecurringInterval(String(formData.get("repeat_months") ?? ""));
+
   if (id) {
     const { error } = await supabase.from("transactions").update(payload).eq("id", id);
     if (error) return { error: error.message };
   } else {
-    const { error } = await supabase.from("transactions").insert(payload);
+    const { data: inserted, error } = await supabase
+      .from("transactions")
+      .insert(payload)
+      .select("id")
+      .single();
     if (error) return { error: error.message };
+
+    if (interval && inserted) {
+      const title = note ?? defaultRecurringTitle(type, interval);
+      const { data: rule, error: ruleError } = await supabase
+        .from("recurring_payments")
+        .insert({
+          title,
+          type,
+          amount_bani: stored,
+          category_id,
+          note,
+          interval_months: interval,
+          next_date: addCalendarMonths(date, interval),
+          created_by: user.id,
+          active: true,
+        })
+        .select("id")
+        .single();
+      if (ruleError) return { error: ruleError.message };
+      if (rule) {
+        const { error: linkError } = await supabase
+          .from("transactions")
+          .update({ recurring_payment_id: rule.id })
+          .eq("id", inserted.id);
+        if (linkError) return { error: linkError.message };
+      }
+    }
   }
 
   revalidatePath("/");
   revalidatePath("/history");
+  revalidatePath("/recurring");
   redirect("/history");
 }
 
@@ -232,6 +267,76 @@ function revalidateReminders() {
   revalidatePath("/");
   revalidatePath("/history");
   revalidatePath("/reminders");
+}
+
+function revalidateRecurring() {
+  revalidatePath("/");
+  revalidatePath("/history");
+  revalidatePath("/recurring");
+  revalidatePath("/family");
+}
+
+export async function saveRecurringPayment(formData: FormData): Promise<{ error?: string }> {
+  const { supabase, user } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const type = String(formData.get("type") ?? "") as TxType;
+  const amount = parseAmountToBani(String(formData.get("amount") ?? ""));
+  const category_id = String(formData.get("category_id") ?? "") || null;
+  const next_date = String(formData.get("next_date") ?? "");
+  const interval_months = parseRecurringInterval(String(formData.get("interval_months") ?? "1"));
+  const note = String(formData.get("note") ?? "").trim() || null;
+  const active = String(formData.get("active") ?? "true") !== "false";
+
+  if (!title) return { error: "Give this payment a name." };
+  if (type !== "income" && type !== "expense") {
+    return { error: "Choose income or expense." };
+  }
+  if (!amount) return { error: "Enter a valid amount." };
+  if (!next_date) return { error: "Pick the next payment date." };
+  if (!interval_months) return { error: "Choose how often this repeats." };
+
+  const money = await getMoneyContext();
+  const stored = toStoredBani(amount, money);
+  if (stored == null || stored <= 0) {
+    return { error: "Could not convert that amount. Try again or switch back to SEK." };
+  }
+
+  const payload = {
+    title,
+    type,
+    amount_bani: stored,
+    category_id,
+    note,
+    interval_months,
+    next_date,
+    active,
+  };
+
+  if (id) {
+    const { error } = await supabase.from("recurring_payments").update(payload).eq("id", id);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase.from("recurring_payments").insert({
+      ...payload,
+      created_by: user.id,
+    });
+    if (error) return { error: error.message };
+  }
+
+  await applyDueRecurringPayments();
+  revalidateRecurring();
+  redirect("/recurring");
+}
+
+export async function deleteRecurringPayment(formData: FormData) {
+  const { supabase } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const { error } = await supabase.from("recurring_payments").delete().eq("id", id);
+  if (error) throw error;
+  revalidateRecurring();
+  redirect("/recurring");
 }
 
 export async function saveReminder(formData: FormData): Promise<{ error?: string }> {

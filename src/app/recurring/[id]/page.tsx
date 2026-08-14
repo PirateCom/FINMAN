@@ -1,18 +1,18 @@
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { BackButton } from "@/components/back-button";
+import { RecurringForm } from "@/components/recurring-form";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { TransactionForm } from "@/components/transaction-form";
 import {
   ensureProfile,
   getCategories,
   getMoneyContext,
-  getTransaction,
+  getRecurringPayment,
   getUser,
 } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 
-export default async function EditPage({
+export default async function EditRecurringPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -23,21 +23,17 @@ export default async function EditPage({
   await ensureProfile(user.id, user.email);
 
   const { id } = await params;
-  const [tx, categories, money] = await Promise.all([
-    getTransaction(id),
+  const [payment, categories, money] = await Promise.all([
+    getRecurringPayment(id),
     getCategories(),
     getMoneyContext(),
   ]);
 
-  if (!tx) notFound();
+  if (!payment) notFound();
 
   return (
-    <AppShell title="Edit" back={<BackButton />} action={<ThemeToggle />}>
-      <TransactionForm
-        categories={categories}
-        money={money}
-        transaction={tx}
-      />
+    <AppShell title="Edit automatic" back={<BackButton fallback="/recurring" />} action={<ThemeToggle />}>
+      <RecurringForm categories={categories} money={money} payment={payment} />
     </AppShell>
   );
 }

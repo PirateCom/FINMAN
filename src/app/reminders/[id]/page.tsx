@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { BackButton } from "@/components/back-button";
 import { ReminderForm } from "@/components/reminder-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -31,7 +32,7 @@ export default async function EditReminderPage({
   if (!reminder) notFound();
 
   return (
-    <AppShell title="Edit reminder" action={<ThemeToggle />}>
+    <AppShell title="Edit reminder" back={<BackButton fallback="/reminders" />} action={<ThemeToggle />}>
       <ReminderForm categories={categories} money={money} reminder={reminder} />
     </AppShell>
   );

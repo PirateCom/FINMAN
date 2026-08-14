@@ -22,6 +22,7 @@ export type Transaction = {
   note: string | null;
   entered_by: string;
   created_at: string;
+  recurring_payment_id: string | null;
   category: Category | null;
   profile: Pick<Profile, "display_name"> | null;
 };
@@ -44,6 +45,25 @@ export type Reminder = {
   note: string | null;
   created_by: string;
   completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  category: Category | null;
+};
+
+export type RecurringInterval = 1 | 3 | 6 | 12;
+
+export type RecurringPayment = {
+  id: string;
+  title: string;
+  type: TxType;
+  amount_bani: number;
+  category_id: string | null;
+  note: string | null;
+  interval_months: RecurringInterval;
+  next_date: string;
+  end_date: string | null;
+  active: boolean;
+  created_by: string;
   created_at: string;
   updated_at: string;
   category: Category | null;
