@@ -1,0 +1,2 @@
+# FINMAN
+Family finance  manager
