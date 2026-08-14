@@ -8,6 +8,7 @@ import {
   byPerson,
   ensureProfile,
   getAllTransactions,
+  getSavingsByUser,
   getSettings,
   getTransactions,
   getUser,
@@ -34,15 +35,23 @@ export default async function HomePage({
   let monthTx: Transaction[] = [];
   let allTx: Transaction[] = [];
   let currency = "SEK";
+  let savings = 0;
   let loadError: string | null = null;
 
   try {
     const settings = await getSettings();
     currency = settings.currency;
-    [monthTx, allTx] = await Promise.all([
+    const [monthData, allData, savingsByUser] = await Promise.all([
       getTransactions({ year, month }),
       getAllTransactions(),
+      getSavingsByUser().catch(() => ({}) as Record<string, number>),
     ]);
+    monthTx = monthData;
+    allTx = allData;
+    savings =
+      scope === "you"
+        ? (savingsByUser[user.id] ?? 0)
+        : Object.values(savingsByUser).reduce((sum, n) => sum + n, 0);
   } catch {
     loadError = "Could not load data. Run the SQL migration in your new Supabase project.";
   }
@@ -79,6 +88,7 @@ export default async function HomePage({
             month={monthTotals(scopedMonth)}
             allTime={monthTotals(scopedAll)}
             currency={currency}
+            savings={savings}
           />
 
           <div className="mt-8 flex items-center justify-between">

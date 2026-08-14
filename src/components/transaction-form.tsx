@@ -189,8 +189,6 @@ export function TransactionForm({
           type="submit"
           formAction={deleteTransaction}
           formNoValidate
-          name="id"
-          value={transaction.id}
           onClick={(e) => {
             if (!confirm("Delete this transaction?")) e.preventDefault();
           }}

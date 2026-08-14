@@ -157,6 +157,22 @@ function normalizeTransaction(row: Record<string, unknown>): Transaction {
   };
 }
 
+export async function getSavingsByUser(): Promise<Record<string, number>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("savings_movements")
+    .select("user_id, amount_bani");
+
+  if (error) throw error;
+
+  const totals: Record<string, number> = {};
+  for (const row of data ?? []) {
+    const id = row.user_id as string;
+    totals[id] = (totals[id] ?? 0) + (row.amount_bani as number);
+  }
+  return totals;
+}
+
 export function monthTotals(transactions: Transaction[]) {
   let income = 0;
   let expense = 0;

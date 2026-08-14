@@ -174,3 +174,36 @@ export async function updateCurrency(formData: FormData): Promise<{ error?: stri
   revalidatePath("/settings");
   return {};
 }
+
+export async function setSavings(formData: FormData): Promise<{ error?: string }> {
+  const { supabase, user } = await requireUser();
+  const userId = String(formData.get("user_id") ?? "");
+  const raw = String(formData.get("amount") ?? "").trim().replace(/\s/g, "").replace(",", ".");
+  const n = Number(raw);
+  if (userId !== user.id) return { error: "You can only edit your own savings." };
+  if (!Number.isFinite(n) || n < 0) return { error: "Enter a valid amount (0 or more)." };
+
+  const target = Math.round(n * 100);
+  const { data: rows, error: sumError } = await supabase
+    .from("savings_movements")
+    .select("amount_bani")
+    .eq("user_id", userId);
+  if (sumError) return { error: sumError.message };
+
+  const current = (rows ?? []).reduce((sum, row) => sum + (row.amount_bani as number), 0);
+  const delta = target - current;
+  if (delta === 0) return {};
+
+  const { error } = await supabase.from("savings_movements").insert({
+    user_id: userId,
+    amount_bani: delta,
+    note: "Balance edited",
+    entered_by: user.id,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/family");
+  revalidatePath("/");
+  revalidatePath("/history");
+  return {};
+}

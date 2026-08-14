@@ -15,7 +15,7 @@ Shared household ledger for income and expenses. You and your wife sign in from 
 Do **not** reuse the Tocab store project.
 
 1. Open [https://supabase.com](https://supabase.com) → New project.
-2. SQL Editor → paste and run [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql), then [`supabase/migrations/002_users.sql`](supabase/migrations/002_users.sql), then [`supabase/migrations/003_currency_sek.sql`](supabase/migrations/003_currency_sek.sql) (default currency SEK).
+2. SQL Editor → paste and run [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql), then [`supabase/migrations/002_users.sql`](supabase/migrations/002_users.sql), then [`supabase/migrations/003_currency_sek.sql`](supabase/migrations/003_currency_sek.sql), then [`supabase/migrations/004_savings.sql`](supabase/migrations/004_savings.sql) (savings accounts).
 3. **Authentication → Providers → Email**: leave email/password on.
 4. **Authentication → Providers → Email**: turn **off** “Confirm email” so signup logs you in immediately.
 5. Leave **Allow new users to sign up** **on**. Each person creates their own account the first time they open the app.

@@ -10,6 +10,7 @@ import {
   byPerson,
   ensureProfile,
   getAllTransactions,
+  getSavingsByUser,
   getSettings,
   getTransactions,
   getUser,
@@ -38,13 +39,18 @@ export default async function HistoryPage({
   const scope = parseScope(q.scope);
 
   const settings = await getSettings();
-  const [monthAll, allTime] = await Promise.all([
+  const [monthAll, allTime, savingsByUser] = await Promise.all([
     getTransactions({ year, month }),
     getAllTransactions(),
+    getSavingsByUser().catch(() => ({}) as Record<string, number>),
   ]);
 
   const scopedMonth = scope === "you" ? byPerson(monthAll, user.id) : monthAll;
   const scopedAll = scope === "you" ? byPerson(allTime, user.id) : allTime;
+  const savings =
+    scope === "you"
+      ? (savingsByUser[user.id] ?? 0)
+      : Object.values(savingsByUser).reduce((sum, n) => sum + n, 0);
   const listed =
     type === "all" ? scopedMonth : scopedMonth.filter((tx) => tx.type === type);
 
@@ -87,6 +93,7 @@ export default async function HistoryPage({
           month={monthTotals(scopedMonth)}
           allTime={monthTotals(scopedAll)}
           currency={settings.currency}
+          savings={savings}
         />
       </div>
 

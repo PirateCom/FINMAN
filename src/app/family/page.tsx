@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { SavingsForm } from "@/components/savings-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   byPerson,
   ensureProfile,
   getAllTransactions,
   getProfiles,
+  getSavingsByUser,
   getSettings,
   getTransactions,
   getUser,
@@ -28,11 +30,66 @@ export default async function FamilyPage() {
     getAllTransactions(),
   ]);
 
+  let savings: Record<string, number> = {};
+  try {
+    savings = await getSavingsByUser();
+  } catch {
+    savings = {};
+  }
+
+  const householdSavings = Object.values(savings).reduce((sum, n) => sum + n, 0);
+  const listedMembers = [...members].sort((a, b) => {
+    if (a.id === user.id) return -1;
+    if (b.id === user.id) return 1;
+    return a.display_name.localeCompare(b.display_name);
+  });
+
   return (
     <AppShell title="Family" action={<ThemeToggle />}>
       <p className="mb-4 text-sm text-[var(--muted-fg)]">
         {members.length} {members.length === 1 ? "member" : "members"} · {monthLabel(year, month)}
       </p>
+
+      <div className="mb-4 overflow-hidden rounded-[28px] bg-[var(--accent)] text-[var(--accent-fg)]">
+        <div className="px-5 py-5">
+          <p className="text-sm opacity-80">Household savings</p>
+          <p className="mt-1 text-3xl font-semibold tracking-tight">
+            {formatMoney(householdSavings, settings.currency)}
+          </p>
+        </div>
+
+        {listedMembers.length > 0 ? (
+          <ul className="border-t border-[var(--accent-fg)]/15">
+            {listedMembers.map((member) => {
+              const isYou = member.id === user.id;
+              const saved = savings[member.id] ?? 0;
+              return (
+                <li
+                  key={member.id}
+                  className="flex items-start justify-between gap-3 px-5 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      {isYou ? "My savings" : member.display_name}
+                    </p>
+                    {isYou ? (
+                      <p className="truncate text-xs opacity-70">{member.display_name}</p>
+                    ) : null}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <SavingsForm
+                      userId={member.id}
+                      currency={settings.currency}
+                      current={saved}
+                      canEdit={isYou}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
 
       <ul className="flex flex-col gap-3">
         {members.map((member) => {
@@ -60,7 +117,7 @@ export default async function FamilyPage() {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-xl bg-[var(--muted)] px-3 py-2">
                   <p className="text-xs text-[var(--muted-fg)]">Remaining this month</p>
                   <p className="mt-0.5 font-semibold">{formatMoney(monthStats.net, settings.currency)}</p>

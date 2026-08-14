@@ -4,10 +4,12 @@ export function TotalsCard({
   month,
   allTime,
   currency,
+  savings,
 }: {
   month: { income: number; expense: number; net: number };
   allTime: { income: number; expense: number; net: number };
   currency: string;
+  savings?: number;
 }) {
   return (
     <>
@@ -20,6 +22,12 @@ export function TotalsCard({
           All time remaining{" "}
           <span className="font-semibold opacity-100">{formatMoney(allTime.net, currency)}</span>
         </p>
+        {savings != null ? (
+          <p className="mt-2 text-sm opacity-80">
+            Savings{" "}
+            <span className="font-semibold opacity-100">{formatMoney(savings, currency)}</span>
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
