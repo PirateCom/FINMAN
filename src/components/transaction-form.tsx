@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addCategory, deleteTransaction, saveTransaction } from "@/lib/actions";
+import { startAppLoading } from "@/lib/loading";
 import { baniToInput, todayISO, toDisplayBani, type MoneyContext } from "@/lib/money";
 import { RECURRING_INTERVALS } from "@/lib/recurring";
 import type { Category, RecurringInterval, Transaction, TxType } from "@/lib/types";
@@ -186,7 +187,7 @@ export function TransactionForm({
           </select>
           {repeat ? (
             <span className="font-normal text-[var(--muted-fg)]">
-              This amount will be added again automatically {RECURRING_INTERVALS.find((o) => o.value === repeat)?.label.toLowerCase()}.
+              This amount will be added again on the 25th (salary day), {RECURRING_INTERVALS.find((o) => o.value === repeat)?.label.toLowerCase()}.
             </span>
           ) : null}
         </label>
@@ -217,6 +218,7 @@ export function TransactionForm({
       <button
         type="button"
         onClick={() => {
+          startAppLoading();
           if (typeof window !== "undefined" && window.history.length > 1) {
             router.back();
           } else {

@@ -1,4 +1,4 @@
-import { todayISO } from "@/lib/money";
+import { addDaysISO, todayISO } from "@/lib/money";
 import type { RepeatMonths } from "@/lib/types";
 
 export const REPEAT_OPTIONS: { value: RepeatMonths; label: string }[] = [
@@ -23,16 +23,6 @@ export function addCalendarMonths(iso: string, months: number): string {
   const lastDay = new Date(year, targetMonthIndex + 1, 0).getDate();
   const clamped = Math.min(day, lastDay);
   const result = new Date(year, targetMonthIndex, clamped);
-  return [
-    result.getFullYear(),
-    String(result.getMonth() + 1).padStart(2, "0"),
-    String(result.getDate()).padStart(2, "0"),
-  ].join("-");
-}
-
-export function addDaysISO(iso: string, days: number): string {
-  const [year, month, day] = iso.split("-").map(Number);
-  const result = new Date(year, month - 1, day + days);
   return [
     result.getFullYear(),
     String(result.getMonth() + 1).padStart(2, "0"),

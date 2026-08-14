@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { NavigationLoading } from "@/components/navigation-loading";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +41,9 @@ export default function RootLayout({
           {`try{if(localStorage.getItem('finman-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}`}
         </Script>
         {children}
+        <Suspense fallback={null}>
+          <NavigationLoading />
+        </Suspense>
       </body>
     </html>
   );

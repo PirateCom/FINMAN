@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteRecurringPayment, saveRecurringPayment } from "@/lib/actions";
-import { baniToInput, todayISO, toDisplayBani, type MoneyContext } from "@/lib/money";
+import { startAppLoading } from "@/lib/loading";
+import { baniToInput, nextPayResetOnOrAfter, todayISO, toDisplayBani, type MoneyContext } from "@/lib/money";
 import { RECURRING_INTERVALS } from "@/lib/recurring";
 import type { Category, RecurringInterval, RecurringPayment, TxType } from "@/lib/types";
 
@@ -131,7 +132,7 @@ export function RecurringForm({
           name="next_date"
           type="date"
           required
-          defaultValue={payment?.next_date ?? todayISO()}
+          defaultValue={payment?.next_date ?? nextPayResetOnOrAfter(todayISO())}
           className="h-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 text-base font-normal outline-none ring-[var(--accent)] focus:ring-2"
         />
       </label>
@@ -173,7 +174,7 @@ export function RecurringForm({
         </button>
       ) : (
         <p className="text-sm leading-relaxed text-[var(--muted-fg)]">
-          If the next date is today or earlier, the first payment is added now. After that it posts on its own when you open the app.
+          The household month resets on the 25th, when salary arrives. Automatic payments are posted on that day, then every 1 / 3 / 6 / 12 months after.
         </p>
       )}
 
@@ -192,6 +193,7 @@ export function RecurringForm({
       <button
         type="button"
         onClick={() => {
+          startAppLoading();
           if (typeof window !== "undefined" && window.history.length > 1) {
             router.back();
           } else {

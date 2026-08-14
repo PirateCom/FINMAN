@@ -1,4 +1,4 @@
-import { addCalendarMonths } from "@/lib/reminders";
+import { addPayCycles, nextPayResetOnOrAfter } from "@/lib/money";
 import type { RecurringInterval } from "@/lib/types";
 
 export const RECURRING_INTERVALS: { value: RecurringInterval; label: string }[] = [
@@ -19,7 +19,7 @@ export function parseRecurringInterval(value: string): RecurringInterval | null 
 }
 
 export function nextOccurrence(from: string, months: number): string {
-  return addCalendarMonths(from, months);
+  return addPayCycles(nextPayResetOnOrAfter(from), months);
 }
 
 export function defaultRecurringTitle(type: "income" | "expense", interval: RecurringInterval): string {

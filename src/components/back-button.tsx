@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { startAppLoading } from "@/lib/loading";
 
 export function BackButton({ fallback = "/" }: { fallback?: string }) {
   const router = useRouter();
@@ -9,6 +10,7 @@ export function BackButton({ fallback = "/" }: { fallback?: string }) {
     <button
       type="button"
       onClick={() => {
+        startAppLoading();
         if (typeof window !== "undefined" && window.history.length > 1) {
           router.back();
         } else {

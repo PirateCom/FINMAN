@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getMoneyContext, applyDueRecurringPayments } from "@/lib/data";
-import { parseAmountToBani, todayISO, toStoredBani } from "@/lib/money";
-import { defaultRecurringTitle, parseRecurringInterval } from "@/lib/recurring";
-import { addCalendarMonths, nextDueAfterPaid } from "@/lib/reminders";
+import { alignRecurringDate, parseAmountToBani, todayISO, toStoredBani } from "@/lib/money";
+import { defaultRecurringTitle, nextOccurrence, parseRecurringInterval } from "@/lib/recurring";
+import { nextDueAfterPaid } from "@/lib/reminders";
 import type { RepeatMonths, TxType } from "@/lib/types";
 
 async function requireUser() {
@@ -130,7 +130,7 @@ export async function saveTransaction(formData: FormData): Promise<{ error?: str
           category_id,
           note,
           interval_months: interval,
-          next_date: addCalendarMonths(date, interval),
+          next_date: nextOccurrence(date, interval),
           created_by: user.id,
           active: true,
         })
@@ -296,6 +296,8 @@ export async function saveRecurringPayment(formData: FormData): Promise<{ error?
   if (!next_date) return { error: "Pick the next payment date." };
   if (!interval_months) return { error: "Choose how often this repeats." };
 
+  const alignedNext = alignRecurringDate(next_date, interval_months, todayISO());
+
   const money = await getMoneyContext();
   const stored = toStoredBani(amount, money);
   if (stored == null || stored <= 0) {
@@ -309,7 +311,7 @@ export async function saveRecurringPayment(formData: FormData): Promise<{ error?
     category_id,
     note,
     interval_months,
-    next_date,
+    next_date: alignedNext,
     active,
   };
 

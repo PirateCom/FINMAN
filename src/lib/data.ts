@@ -1,7 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { loadFxSnapshot } from "@/lib/fx-server";
-import { monthBounds, todayISO, type MoneyContext } from "@/lib/money";
-import { addCalendarMonths, dueSoonUntilISO } from "@/lib/reminders";
+import {
+  addPayCycles,
+  alignRecurringDate,
+  datesInRange,
+  monthBounds,
+  nextPayResetOnOrAfter,
+  todayISO,
+  type MoneyContext,
+} from "@/lib/money";
+import { dueSoonUntilISO } from "@/lib/reminders";
 import type {
   Category,
   Profile,
@@ -243,8 +251,8 @@ export async function applyDueRecurringPayments() {
   if (error) throw error;
 
   for (const rule of rules ?? []) {
-    let next = rule.next_date as string;
     const interval = Number(rule.interval_months) || 1;
+    let next = alignRecurringDate(rule.next_date as string, interval, today);
     const end = (rule.end_date as string | null) ?? null;
     let posted = 0;
 
@@ -261,7 +269,7 @@ export async function applyDueRecurringPayments() {
         recurring_payment_id: rule.id,
       });
       if (txError && txError.code !== "23505") throw txError;
-      next = addCalendarMonths(next, interval);
+      next = addPayCycles(next, interval);
       posted += 1;
     }
 
@@ -305,7 +313,7 @@ export async function getRecurringPayment(id: string): Promise<RecurringPayment 
 export async function getUpcomingRecurring(): Promise<RecurringPayment[]> {
   const supabase = await createClient();
   const today = todayISO();
-  const until = addCalendarMonths(today, 1);
+  const until = nextPayResetOnOrAfter(today);
   const { data, error } = await supabase
     .from("recurring_payments")
     .select(recurringSelect)
@@ -346,6 +354,7 @@ export function monthTotals(transactions: Transaction[]) {
 
 export type RemainingDay = {
   day: number;
+  date: string;
   remaining: number;
   pct: number;
 };
@@ -360,40 +369,41 @@ export type RemainingSeries = {
   currentRemaining: number;
 };
 
-/** 100% = month income; remaining falls as expenses land through the month. */
+/** 100% = period income; remaining falls as expenses land through the pay cycle. */
 export function remainingOfIncome(
   transactions: Transaction[],
   year: number,
   month: number,
 ): RemainingSeries {
   const { start, end } = monthBounds(year, month);
-  const lastDay = Number(end.slice(-2));
+  const dates = datesInRange(start, end);
+  const lastDay = dates.length;
   const today = todayISO();
   const isCurrentMonth = today >= start && today <= end;
-  const todayDay = isCurrentMonth ? Number(today.slice(-2)) : lastDay;
+  const todayIndex = dates.indexOf(today);
+  const todayDay = isCurrentMonth && todayIndex >= 0 ? todayIndex + 1 : lastDay;
 
   let income = 0;
-  const expenseByDay = Array.from({ length: lastDay + 1 }, () => 0);
+  const expenseByDate = new Map<string, number>();
   for (const tx of transactions) {
     if (tx.type === "income") {
       income += tx.amount_bani;
       continue;
     }
-    const day = Number(tx.date.slice(-2));
-    if (day >= 1 && day <= lastDay) expenseByDay[day] += tx.amount_bani;
+    expenseByDate.set(tx.date, (expenseByDate.get(tx.date) ?? 0) + tx.amount_bani);
   }
 
   let spent = 0;
-  const days: RemainingDay[] = [];
-  for (let day = 1; day <= lastDay; day++) {
-    spent += expenseByDay[day];
+  const days: RemainingDay[] = dates.map((date, i) => {
+    spent += expenseByDate.get(date) ?? 0;
     const remaining = income - spent;
     const pct = income > 0 ? (remaining / income) * 100 : 0;
-    days.push({ day, remaining, pct });
-  }
+    return { day: i + 1, date, remaining, pct };
+  });
 
   const current = days[Math.max(0, todayDay - 1)] ?? {
     day: todayDay,
+    date: today,
     remaining: income,
     pct: income > 0 ? 100 : 0,
   };

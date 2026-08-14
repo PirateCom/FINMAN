@@ -103,7 +103,14 @@ export function RemainingChart({ series }: { series: RemainingSeries }) {
                 fill={fill}
               />
             ) : null}
-            {tickDays.map((day) => (
+            {tickDays.map((day) => {
+              const row = days.find((d) => d.day === day);
+              const calendarDay = row ? String(Number(row.date.slice(-2))) : String(day);
+              const label =
+                isCurrentMonth && day === todayDay && day !== 1 && day !== lastDay
+                  ? "today"
+                  : calendarDay;
+              return (
               <text
                 key={day}
                 x={xAt(day)}
@@ -112,9 +119,10 @@ export function RemainingChart({ series }: { series: RemainingSeries }) {
                 fill="var(--muted-fg)"
                 fontSize="10"
               >
-                {isCurrentMonth && day === todayDay && day !== 1 && day !== lastDay ? "today" : day}
+                {label}
               </text>
-            ))}
+              );
+            })}
           </svg>
         </div>
 

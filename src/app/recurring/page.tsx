@@ -38,7 +38,7 @@ export default async function RecurringPage() {
   return (
     <AppShell title="Automatic" action={<ThemeToggle />}>
       <p className="mb-5 text-sm text-[var(--muted-fg)]">
-        Standing payments such as a monthly stock transfer. They are added on the date you set, then repeat by themselves.
+        Standing payments such as a monthly stock transfer. They post on the 25th, when salary arrives, then repeat by themselves.
       </p>
 
       <RecurringForm categories={categories} money={money} />

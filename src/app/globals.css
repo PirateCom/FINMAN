@@ -65,3 +65,17 @@ button {
 button {
   cursor: pointer;
 }
+
+@keyframes app-icon-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.app-loading-icon {
+  animation: app-icon-breathe 1.4s ease-in-out infinite;
+}
