@@ -1,6 +1,6 @@
-# FINMAN — Family Finances
+# HomeFin — Family Finances
 
-Shared household ledger for income and expenses. You and your wife sign in from any phone. Data lives in **Supabase**. Host it at **`finances.<your-domain>`**.
+Home finances GPlay app. Shared household ledger for income and expenses. You and your wife sign in from any phone. Data lives in **Supabase**. Host it at **`finances.<your-domain>`**.
 
 ## What you get
 
