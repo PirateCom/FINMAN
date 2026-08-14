@@ -7,6 +7,7 @@ const items = [
   { href: "/", label: "Home", icon: HomeIcon },
   { href: "/add", label: "Add", icon: AddIcon },
   { href: "/history", label: "History", icon: HistoryIcon },
+  { href: "/family", label: "Family", icon: FamilyIcon },
   { href: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -15,7 +16,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-[430px] -translate-x-1/2 border-t border-[var(--border)] bg-[var(--surface)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {items.map(({ href, label, icon: Icon }) => {
           const active =
             href === "/"
@@ -67,6 +68,21 @@ function HistoryIcon({ active }: { active: boolean }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M5 7h14M5 12h14M5 17h9"
+        stroke="currentColor"
+        strokeWidth={active ? 2.2 : 1.8}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function FamilyIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="9" cy="8" r="2.4" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} />
+      <circle cx="15.5" cy="9" r="2" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} />
+      <path
+        d="M4.5 19c.4-3 2.4-5 4.5-5s4.1 2 4.5 5M13 14.2c1.7.1 3.5 1.6 4 3.8"
         stroke="currentColor"
         strokeWidth={active ? 2.2 : 1.8}
         strokeLinecap="round"
