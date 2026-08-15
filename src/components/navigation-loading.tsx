@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   getAppLoading,
@@ -122,11 +123,12 @@ export function NavigationLoading() {
       <div className="relative h-full w-full max-w-[430px]">
         <div className="absolute inset-0 bg-[var(--surface)]/35 backdrop-blur-md dark:bg-black/35" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <img
+          <Image
             src="/icon.svg"
             alt=""
             width={80}
             height={80}
+            unoptimized
             className="app-loading-icon h-20 w-20 rounded-[20px] shadow-[0_12px_40px_rgba(15,61,62,0.28)]"
           />
         </div>
