@@ -29,53 +29,6 @@ export async function signIn(formData: FormData): Promise<{ error?: string }> {
   redirect("/");
 }
 
-export async function signUp(formData: FormData): Promise<{ error?: string }> {
-  const username = String(formData.get("username") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-
-  if (!username) return { error: "Username is required." };
-  if (!email || !password) return { error: "Email and password are required." };
-  if (password.length < 6) return { error: "Password must be at least 6 characters." };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { display_name: username },
-    },
-  });
-  if (error) return { error: error.message };
-
-  if (!data.session) {
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (signInError) {
-      return {
-        error:
-          "Account created, but you are not logged in. In Supabase go to Authentication → Providers → Email and turn off Confirm email.",
-      };
-    }
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) {
-    const { error: profileError } = await supabase.from("users").upsert({
-      id: user.id,
-      email: user.email,
-      display_name: username,
-    });
-    if (profileError) return { error: profileError.message };
-  }
-
-  redirect("/");
-}
-
 export async function saveTransaction(formData: FormData): Promise<{ error?: string }> {
   const { supabase, user } = await requireUser();
   const id = String(formData.get("id") ?? "");

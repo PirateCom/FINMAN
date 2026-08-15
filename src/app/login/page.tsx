@@ -12,7 +12,7 @@ export default function LoginPage() {
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Family Finances</h1>
         <p className="mt-2 text-[var(--muted-fg)]">
-          First time here? Create an account with your name, email, and password. You stay signed in on this phone.
+          Sign in with your household account. New signups are closed.
         </p>
       </div>
       {configured ? (
